@@ -1,15 +1,15 @@
 {
-  "name": "@unisat/wallet-sdk",
-  "version": "1.7.3",
+  "name": "@btc-vision/wallet-sdk",
+  "version": "1.0.0",
   "description": "UniSat Wallet SDK",
   "keywords": [
     "bitcoin",
     "keyring",
     "unisat"
   ],
-  "homepage": "https://github.com/unisat-wallet/wallet-sdk#readme",
+  "homepage": "https://github.com/btc-vision/wallet-sdk#readme",
   "bugs": {
-    "url": "https://github.com/unisat-wallet/wallet-sdk/issues"
+    "url": "https://github.com/btc-vision/wallet-sdk/issues"
   },
   "repository": {
     "type": "git",
@@ -31,8 +31,7 @@
     "build:typed": "tsc --declaration --emitDeclarationOnly --noEmit false",
     "test": "mocha -r ts-node/register test/**/*.ts --timeout 300000",
     "prepublishOnly": "npm run build",
-    "lint": "eslint ./src ./test",
-    "postinstall": "npm run build"
+    "lint": "eslint ./src ./test"
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.1.1",
@@ -44,8 +43,9 @@
     "bitcoinjs-lib": "^6.1.6",
     "bitcore-lib": "^10.2.1",
     "ecpair": "^2.1.0",
-    "hdkey": "^2.1.0",
-
+    "hdkey": "^2.1.0"
+  },
+  "devDependencies": {
     "@babel/core": "^7.16.7",
     "@babel/plugin-transform-runtime": "^7.16.5",
     "@babel/preset-env": "^7.16.5",
@@ -85,9 +85,6 @@
     "webpack": "^5.91.0",
     "webpack-cli": "^4.9.1",
     "webpack-stream": "^7.0.0"
-  },
-  "devDependencies": {
-
   },
   "engines": {
     "node": ">=14.0.0"
