@@ -1,6 +1,6 @@
 {
   "name": "@unisat/wallet-sdk",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "UniSat Wallet SDK",
   "keywords": [
     "bitcoin",
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/unisat-wallet/wallet-sdk.git"
+    "url": "https://github.com/btc-vision/wallet-sdk.git"
   },
   "author": "cybersinsloth",
   "license": "ISC",
