@@ -7,12 +7,12 @@ import { sendRunes } from './send-runes';
 import { splitInscriptionUtxo } from './split-inscription-utxo';
 
 export {
-  sendAllBTC,
-  sendAtomicalsFT,
-  sendAtomicalsNFT,
-  sendBTC,
-  sendInscription,
-  sendInscriptions,
-  sendRunes,
-  splitInscriptionUtxo
+    sendAllBTC,
+    sendAtomicalsFT,
+    sendAtomicalsNFT,
+    sendBTC,
+    sendInscription,
+    sendInscriptions,
+    sendRunes,
+    splitInscriptionUtxo
 };

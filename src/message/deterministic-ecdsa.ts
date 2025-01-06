@@ -1,7 +1,8 @@
 import * as hmac from '@noble/hashes/hmac';
 import * as sha256 from '@noble/hashes/sha256';
 import * as noble_secp256k1 from '@noble/secp256k1';
-import { ECPairInterface, bitcoin } from '../bitcoin-core';
+import { bitcoin, ECPairInterface } from '../bitcoin-core';
+
 noble_secp256k1.etc.hmacSha256Sync = (key, ...msgs) =>
     hmac.hmac(sha256.sha256, key, noble_secp256k1.etc.concatBytes(...msgs));
 const MAGIC_BYTES = Buffer.from('Bitcoin Signed Message:\n');
