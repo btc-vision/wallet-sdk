@@ -1,10 +1,10 @@
+import * as bitcoin from 'bitcoinjs-lib';
 import { encode } from 'varuint-bitcoin';
 import { addressToScriptPk, getAddressType } from '../address';
 import { NetworkType, toPsbtNetwork } from '../network';
 import { AddressType } from '../types';
 import { schnorrValidator, validator } from '../utils';
 import { AbstractWallet } from '../wallet';
-import * as bitcoin from 'bitcoinjs-lib';
 
 function bip0322_hash(message: string) {
     const { sha256 } = bitcoin.crypto;
@@ -91,6 +91,8 @@ export async function signMessageOfBIP322Simple({
     });
 
     await wallet.signPsbt(psbtToSign);
+
+    psbtToSign.finalizeAllInputs();
 
     return getSignatureFromPsbtOfBIP322Simple(psbtToSign);
 }
