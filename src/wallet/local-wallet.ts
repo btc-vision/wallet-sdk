@@ -14,7 +14,7 @@ export class LocalWallet implements AbstractWallet {
     network: bitcoin.Network;
     addressType: AddressType;
     networkType: NetworkType;
-    scriptPk: string;
+    scriptPk: string | undefined;
 
     constructor(
         wif: string,
@@ -23,7 +23,7 @@ export class LocalWallet implements AbstractWallet {
     ) {
         const network = toPsbtNetwork(networkType);
         const keyPair = ECPair.fromWIF(wif, network);
-        this.keyring = new SimpleKeyring({ privateKeys: [keyPair.privateKey.toString('hex')], network: network });
+        this.keyring = new SimpleKeyring({ privateKeys: [keyPair.privateKey!.toString('hex')], network: network });
         this.keyring.addAccounts(1);
         this.pubkey = keyPair.publicKey.toString('hex');
         this.address = publicKeyToAddress(this.pubkey, addressType, networkType);

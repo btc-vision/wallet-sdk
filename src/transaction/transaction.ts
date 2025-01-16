@@ -1,3 +1,4 @@
+import { payments } from 'bitcoinjs-lib';
 import { addressToScriptPk } from '../address';
 import { bitcoin } from '../bitcoin-core';
 import { UTXO_DUST } from '../constants';
@@ -98,6 +99,18 @@ function utxoToInput(utxo: UnspentOutput, estimate?: boolean): TxInput {
             data,
             utxo
         };
+    } else {
+        return {
+            data: {
+                hash: utxo.txid,
+                index: utxo.vout,
+                witnessUtxo: {
+                    value: utxo.satoshis,
+                    script: Buffer.from(utxo.scriptPk, 'hex')
+                }
+            },
+            utxo
+        };
     }
 }
 
@@ -106,12 +119,12 @@ function utxoToInput(utxo: UnspentOutput, estimate?: boolean): TxInput {
  */
 export class Transaction {
     public outputs: TxOutput[] = [];
-    public changedAddress: string;
+    public changedAddress: string = '';
     private utxos: UnspentOutput[] = [];
     private inputs: TxInput[] = [];
     private changeOutputIndex = -1;
-    private networkType: NetworkType;
-    private feeRate: number;
+    private networkType: NetworkType = NetworkType.MAINNET;
+    private feeRate: number = 1;
     private enableRBF = true;
     private _cacheNetworkFee = 0;
     private _cacheBtcUtxos: UnspentOutput[] = [];
@@ -172,7 +185,7 @@ export class Transaction {
     }
 
     addOpreturn(data: Buffer[]) {
-        const embed = bitcoin.payments.embed({ data });
+        const embed = payments.embed({ data });
         this.outputs.push({
             script: embed.output,
             value: 0
@@ -343,8 +356,8 @@ Inputs
 ${this.inputs
     .map((input, index) => {
         const str = `
-=>${index} ${input.data.witnessUtxo.value} Sats
-        lock-size: ${input.data.witnessUtxo.script.length}
+=>${index} ${input.data.witnessUtxo!.value} Sats
+        lock-size: ${input.data.witnessUtxo!.script.length}
         via ${input.data.hash} [${input.data.index}]
 `;
         return str;

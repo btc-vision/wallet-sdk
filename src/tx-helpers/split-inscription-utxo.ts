@@ -31,13 +31,13 @@ export async function splitInscriptionUtxo({
 
     const tx = new Transaction();
     tx.setNetworkType(networkType);
-    tx.setFeeRate(feeRate);
+    tx.setFeeRate(feeRate || 1);
     tx.setEnableRBF(enableRBF);
     tx.setChangeAddress(changeAddress);
 
     const toSignInputs: ToSignInput[] = [];
 
-    let lastUnit: InscriptionUnit = null;
+    let lastUnit: InscriptionUnit | null = null;
     let splitedCount = 0;
     const ordUtxo = new InscriptionUnspendOutput(assetUtxo, outputValue);
     tx.addInput(ordUtxo.utxo);
@@ -55,12 +55,12 @@ export async function splitInscriptionUtxo({
         lastUnit = unit;
     }
 
-    if (!lastUnit.hasInscriptions()) {
+    if (!lastUnit!.hasInscriptions()) {
         tx.removeChangeOutput();
     }
 
-    if (lastUnit.satoshis < UTXO_DUST) {
-        lastUnit.satoshis = UTXO_DUST;
+    if (lastUnit!.satoshis < UTXO_DUST) {
+        lastUnit!.satoshis = UTXO_DUST;
     }
 
     const _toSignInputs = await tx.addSufficientUtxosForFee(btcUtxos);

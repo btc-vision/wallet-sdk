@@ -1,9 +1,9 @@
+import { networks } from '@btc-vision/bitcoin';
 import * as bip39 from 'bip39';
 import bitcore from 'bitcore-lib';
 import hdkey from 'hdkey';
 import { ECPair, ECPairInterface } from '../bitcoin-core';
 import { DeserializeOption, IKeyringBase } from './interfaces/SimpleKeyringOptions';
-import { networks } from '@btc-vision/bitcoin';
 
 const hdPathString = "m/44'/0'/0'/0";
 const type = 'HD Key Tree';
@@ -12,12 +12,12 @@ export class HdKeyring extends IKeyringBase<DeserializeOption> {
     static type = type;
 
     type = type;
-    mnemonic: string = null;
-    xpriv: string = null;
-    passphrase: string;
+    mnemonic: string | null = null;
+    xpriv: string | null = null;
+    passphrase: string | null = null;
 
     hdPath = hdPathString;
-    root: bitcore.HDPrivateKey = null;
+    root: bitcore.HDPrivateKey | null = null;
     hdWallet?: any;
     wallets: ECPairInterface[] = [];
     activeIndexes: number[] = [];
@@ -91,7 +91,7 @@ export class HdKeyring extends IKeyringBase<DeserializeOption> {
         this.mnemonic = mnemonic;
         this._index2wallet = {};
 
-        const seed = bip39.mnemonicToSeedSync(mnemonic, this.passphrase);
+        const seed = bip39.mnemonicToSeedSync(mnemonic, this.passphrase!);
         this.hdWallet = hdkey.fromMasterSeed(seed);
         this.root = this.hdWallet.derive(this.hdPath);
     }
@@ -226,7 +226,7 @@ export class HdKeyring extends IKeyringBase<DeserializeOption> {
 
     private _addressFromIndex(i: number): [string, ECPairInterface] {
         if (!this._index2wallet[i]) {
-            const child = this.root.deriveChild(i);
+            const child = this.root!.deriveChild(i);
 
             // @ts-ignore
             const ecpair = ECPair.fromPrivateKey(child.privateKey || Buffer.from(child.toString(), 'hex'), {

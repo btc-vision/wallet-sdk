@@ -1,7 +1,7 @@
+import { networks } from '@btc-vision/bitcoin';
 import base58check from 'bs58check';
 import { ECPair, ECPairInterface } from '../bitcoin-core';
 import { IKeyringBase, SimpleKeyringOptions } from './interfaces/SimpleKeyringOptions';
-import { networks } from '@btc-vision/bitcoin';
 
 const type = 'Simple Key Pair';
 
@@ -19,7 +19,7 @@ export class SimpleKeyring extends IKeyringBase<SimpleKeyringOptions> {
 
     public serialize(): SimpleKeyringOptions {
         return {
-            privateKeys: this.wallets.map((wallet) => wallet.privateKey.toString('hex')),
+            privateKeys: this.wallets.map((wallet) => wallet.privateKey!.toString('hex')),
             network: this.network
         };
     }
@@ -29,7 +29,7 @@ export class SimpleKeyring extends IKeyringBase<SimpleKeyringOptions> {
             opts = { privateKeys: opts }; // compatibility
         }
 
-        this.wallets = opts.privateKeys.map((key) => {
+        this.wallets = opts.privateKeys!.map((key) => {
             let buf: Buffer;
             if (key.length === 64) {
                 // privateKey

@@ -1,7 +1,7 @@
-import { NetworkType, toPsbtNetwork } from '../network';
-import { AddressType } from '../types';
 import * as bitcoin from '@btc-vision/bitcoin';
 import { payments } from '@btc-vision/bitcoin';
+import { NetworkType, toPsbtNetwork } from '../network';
+import { AddressType } from '../types';
 
 /**
  * Convert public key to bitcoin payment object.
@@ -55,7 +55,7 @@ export function publicKeyToAddress(publicKey: string, type: AddressType, network
  */
 export function publicKeyToScriptPk(publicKey: string, type: AddressType, networkType: NetworkType) {
     const payment = publicKeyToPayment(publicKey, type, networkType);
-    return payment.output.toString('hex');
+    return payment?.output?.toString('hex');
 }
 
 /**
@@ -89,8 +89,8 @@ export function decodeAddress(address: string) {
     const regtest = bitcoin.networks.regtest;
     let decodeBase58: bitcoin.address.Base58CheckResult;
     let decodeBech32: bitcoin.address.Bech32Result;
-    let networkType: NetworkType;
-    let addressType: AddressType;
+    let networkType: NetworkType = NetworkType.MAINNET;
+    let addressType: AddressType = AddressType.UNKNOWN;
     if (address.startsWith('bc1') || address.startsWith('tb1') || address.startsWith('bcrt1')) {
         try {
             decodeBech32 = bitcoin.address.fromBech32(address);
