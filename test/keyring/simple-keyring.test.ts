@@ -1,4 +1,4 @@
-import { sha256 } from 'bitcoinjs-lib/src/crypto';
+import { sha256 } from '@btc-vision/bitcoin/src/crypto';
 import { expect } from 'chai';
 import { bitcoin } from '../../src/bitcoin-core';
 import { SimpleKeyring, verifySignData } from '../../src/keyring';

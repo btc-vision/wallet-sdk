@@ -1,7 +1,7 @@
 import ECPairFactory from 'ecpair';
 import * as ecc from '@bitcoinerlab/secp256k1';
-import * as bitcoin from 'bitcoinjs-lib';
-import { initEccLib } from 'bitcoinjs-lib';
+import * as bitcoin from '@btc-vision/bitcoin';
+import { initEccLib } from '@btc-vision/bitcoin';
 
 initEccLib(ecc);
 

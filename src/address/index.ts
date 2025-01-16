@@ -1,7 +1,7 @@
 import { NetworkType, toPsbtNetwork } from '../network';
 import { AddressType } from '../types';
-import * as bitcoin from 'bitcoinjs-lib';
-import { payments } from 'bitcoinjs-lib';
+import * as bitcoin from '@btc-vision/bitcoin';
+import { payments } from '@btc-vision/bitcoin';
 
 /**
  * Convert public key to bitcoin payment object.

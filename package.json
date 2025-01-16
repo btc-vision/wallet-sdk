@@ -89,6 +89,7 @@
     "engines": {
         "node": ">=21.0.0"
     },
+    "packageManager": "yarn@4.6.0",
     "publishConfig": {
         "access": "public",
         "registry": "https://registry.npmjs.org/"

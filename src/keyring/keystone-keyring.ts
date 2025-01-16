@@ -1,6 +1,6 @@
 import KeystoneSDK, { KeystoneBitcoinSDK, UR } from '@keystonehq/keystone-sdk';
 import { uuid } from '@keystonehq/keystone-sdk/dist/utils';
-import { networks, Psbt } from 'bitcoinjs-lib';
+import { networks, Psbt } from '@btc-vision/bitcoin';
 import bitcore from 'bitcore-lib';
 import { verifyMessageOfECDSA } from '../message';
 import { DeserializeOptionKeystone, IKeyringBase, KeystoneKey } from './interfaces/SimpleKeyringOptions';

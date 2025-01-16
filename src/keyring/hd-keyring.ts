@@ -3,7 +3,7 @@ import bitcore from 'bitcore-lib';
 import hdkey from 'hdkey';
 import { ECPair, ECPairInterface } from '../bitcoin-core';
 import { DeserializeOption, IKeyringBase } from './interfaces/SimpleKeyringOptions';
-import { networks } from 'bitcoinjs-lib';
+import { networks } from '@btc-vision/bitcoin';
 
 const hdPathString = "m/44'/0'/0'/0";
 const type = 'HD Key Tree';

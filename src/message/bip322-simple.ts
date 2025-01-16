@@ -1,4 +1,4 @@
-import * as bitcoin from 'bitcoinjs-lib';
+import * as bitcoin from '@btc-vision/bitcoin';
 import { encode } from 'varuint-bitcoin';
 import { addressToScriptPk, getAddressType } from '../address';
 import { NetworkType, toPsbtNetwork } from '../network';

@@ -7,7 +7,7 @@ export enum NetworkType {
 }
 
 /**
- * Convert network type to bitcoinjs-lib network.
+ * Convert network type to @btc-vision/bitcoin network.
  */
 export function toPsbtNetwork(networkType: NetworkType) {
     if (networkType === NetworkType.MAINNET) {
@@ -20,7 +20,7 @@ export function toPsbtNetwork(networkType: NetworkType) {
 }
 
 /**
- * Convert bitcoinjs-lib network to network type.
+ * Convert @btc-vision/bitcoin network to network type.
  */
 export function toNetworkType(network: bitcoin.Network) {
     if (network.bech32 == bitcoin.networks.bitcoin.bech32) {

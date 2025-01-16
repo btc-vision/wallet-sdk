@@ -1,7 +1,7 @@
 import { decode } from 'bs58check';
 import { ECPair, ECPairInterface } from '../bitcoin-core';
 import { IKeyringBase, SimpleKeyringOptions } from './interfaces/SimpleKeyringOptions';
-import { networks } from 'bitcoinjs-lib';
+import { networks } from '@btc-vision/bitcoin';
 
 const type = 'Simple Key Pair';
 
