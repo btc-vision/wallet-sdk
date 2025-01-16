@@ -52,7 +52,7 @@ function toCompact(i: number, signature: Uint8Array, compressed: boolean) {
 export function signMessageOfDeterministicECDSA(ecpair: ECPairInterface, message: string): string {
     const hash = magicHash(message);
 
-    const privateKey = ecpair.privateKey.toString('hex');
+    const privateKey = ecpair.privateKey!.toString('hex');
 
     const { r, s, recovery } = noble_secp256k1.sign(hash, privateKey);
 

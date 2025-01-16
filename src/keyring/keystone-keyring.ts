@@ -1,6 +1,6 @@
+import { networks, Psbt } from '@btc-vision/bitcoin';
 import KeystoneSDK, { KeystoneBitcoinSDK, UR } from '@keystonehq/keystone-sdk';
 import { uuid } from '@keystonehq/keystone-sdk/dist/utils';
-import { networks, Psbt } from '@btc-vision/bitcoin';
 import bitcore from 'bitcore-lib';
 import { verifyMessageOfECDSA } from '../message';
 import { DeserializeOptionKeystone, IKeyringBase, KeystoneKey } from './interfaces/SimpleKeyringOptions';
@@ -19,8 +19,8 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
     mfp = '';
     keys: KeystoneKey[] = [];
     hdPath?: string;
-    activeIndexes?: number[] = [];
-    root: bitcore.HDPublicKey = null;
+    activeIndexes: number[] = [];
+    root: bitcore.HDPublicKey | undefined = undefined;
 
     page = 0;
     perPage = 5;
@@ -42,10 +42,12 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
         const account = keystoneSDK.parseAccount(new UR(Buffer.from(cbor, 'hex'), type));
         this.deserialize({
             mfp: account.masterFingerprint,
-            keys: account.keys.map((k) => ({
-                path: k.path,
-                extendedPublicKey: k.extendedPublicKey
-            }))
+            keys: account.keys
+                .filter((k) => k.extendedPublicKey !== undefined)
+                .map((k) => ({
+                    path: k.path,
+                    extendedPublicKey: k.extendedPublicKey as string
+                }))
         });
     }
 
@@ -83,7 +85,7 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
             opts.hdPath.length >= 13 &&
             opts.hdPath[opts.hdPath.length - 1] === '1'
         ) {
-            this.root = this.root.derive(`m/1`);
+            this.root = this.root?.derive(`m/1`);
         }
     }
 
@@ -102,12 +104,12 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
         const pubkeys: string[] = [];
 
         while (count) {
-            if (this.activeIndexes.includes(i)) {
+            if (this.activeIndexes?.includes(i)) {
                 i++;
             } else {
                 const w = this.getWalletByIndex(i);
                 pubkeys.push(w.publicKey);
-                this.activeIndexes.push(i);
+                this.activeIndexes?.push(i);
                 count--;
             }
         }
@@ -118,15 +120,15 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
     async addChangeAddressAccounts(numberOfAccounts = 1) {
         let count = numberOfAccounts;
         let i = 0;
-        const pubkeys = [];
+        const pubkeys: string[] = [];
 
         while (count) {
-            if (this.activeIndexes.includes(i)) {
+            if (this.activeIndexes?.includes(i)) {
                 i++;
             } else {
                 const w = this.getChangeAddressWalletByIndex(i);
                 pubkeys.push(w.publicKey);
-                this.activeIndexes.push(i);
+                this.activeIndexes?.push(i);
                 count--;
             }
         }
@@ -142,7 +144,7 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
             this.hdPath[this.hdPath.length - 1] === '1'
         ) {
             return this.activeIndexes.map((index) => {
-                const child = this.root.derive(`m/${index}`);
+                const child = this.root!.derive(`m/${index}`);
                 return child.publicKey.toString();
             });
         }
@@ -151,7 +153,7 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
 
     async getAccounts2() {
         return this.activeIndexes.map((index) => {
-            const child = this.root.derive(`m/${index}`);
+            const child = this.root!.derive(`m/${index}`);
             return {
                 index,
                 path: `${this.hdPath}/${index}`,
@@ -171,7 +173,7 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
     }
 
     getWalletByIndex(index: number): Wallet {
-        const child = this.root.derive(`m/0/${index}`);
+        const child = this.root!.derive(`m/0/${index}`);
         return {
             index,
             path: `${this.hdPath}/${index}`,
@@ -180,7 +182,7 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
     }
 
     getChangeAddressWalletByIndex(index: number): Wallet {
-        const child = this.root.derive(`m/1/${index}`);
+        const child = this.root!.derive(`m/1/${index}`);
         return {
             index,
             path: `${this.hdPath}/${index}`,
@@ -319,7 +321,7 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
         const keystoneSDK = new KeystoneSDK({
             origin: this.origin
         });
-        let i = undefined;
+        let i: number | undefined = undefined;
         if (
             this.hdPath !== null &&
             this.hdPath !== undefined &&

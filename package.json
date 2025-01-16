@@ -33,7 +33,7 @@
     },
     "dependencies": {
         "@bitcoinerlab/secp256k1": "^1.2.0",
-        "@btc-vision/bitcoin": "^6.3.4",
+        "@btc-vision/bitcoin": "^6.3.5",
         "@keystonehq/keystone-sdk": "^0.9.1",
         "@noble/secp256k1": "^2.2.2",
         "big-integer": "^1.6.52",
@@ -43,8 +43,10 @@
         "bitcoinjs-lib": "^6.1.7",
         "bitcore-lib": "^10.7.0",
         "bs58check": "^4.0.0",
+        "chrome": "^0.1.0",
         "ecpair": "^2.1.0",
         "hdkey": "^2.1.0",
+        "react": "^19.0.0",
         "react-dom": "^19.0.0"
     },
     "devDependencies": {
@@ -54,9 +56,11 @@
         "@babel/preset-typescript": "^7.26.0",
         "@types/bitcore-lib": "^0.15.6",
         "@types/chai": "^5.0.1",
+        "@types/chrome": "^0",
         "@types/hdkey": "^2.1.0",
         "@types/mocha": "^10.0.10",
         "@types/node": "^22.10.7",
+        "@types/react": "^19",
         "@types/react-dom": "^19",
         "@typescript-eslint/eslint-plugin": "^8.20.0",
         "@typescript-eslint/parser": "^8.20.0",

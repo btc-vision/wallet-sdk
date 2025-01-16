@@ -131,7 +131,7 @@ function verifySignatureOfBIP322Simple_P2TR(
     txToSpend.addOutput(outputScript, 0);
 
     const data = Buffer.from(sign, 'base64');
-    const _res = bitcoin.script.decompile(data.slice(1));
+    const _res = bitcoin.script.decompile(data.slice(1)) as Buffer[];
     const signature = _res[0] as Buffer;
     const pubkey = Buffer.from('02' + outputScript.subarray(2).toString('hex'), 'hex');
 
@@ -172,7 +172,7 @@ function verifySignatureOfBIP322Simple_P2PWPKH(
     txToSpend.addOutput(outputScript, 0);
 
     const data = Buffer.from(sign, 'base64');
-    const _res = bitcoin.script.decompile(data.slice(1));
+    const _res = bitcoin.script.decompile(data.slice(1)) as Buffer[];
 
     const psbtToSign = new bitcoin.Psbt();
     psbtToSign.setVersion(0);

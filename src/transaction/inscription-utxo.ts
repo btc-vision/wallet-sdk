@@ -27,7 +27,7 @@ export class InscriptionUnit {
 }
 
 export class InscriptionUnspendOutput {
-    inscriptionUnits: InscriptionUnit[];
+    inscriptionUnits: InscriptionUnit[] = [];
     utxo: UnspentOutput;
 
     constructor(utxo: UnspentOutput, outputValue?: number) {

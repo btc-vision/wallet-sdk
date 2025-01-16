@@ -1,9 +1,9 @@
 import { Network, networks, Psbt } from '@btc-vision/bitcoin';
-import { EventEmitter } from 'events';
-import { ECPairInterface } from 'ecpair';
 import { isTaprootInput } from '@btc-vision/bitcoin/src/psbt/bip371';
-import { tweakSigner } from '../../utils';
+import { ECPairInterface } from 'ecpair';
+import { EventEmitter } from 'events';
 import { signMessageOfDeterministicECDSA, verifyMessageOfECDSA } from '../../message';
+import { tweakSigner } from '../../utils';
 
 interface BaseKeyringOptions {
     readonly network?: Network;
@@ -19,9 +19,9 @@ export interface DeserializeOptionBase extends BaseKeyringOptions {
 }
 
 export interface DeserializeOption extends DeserializeOptionBase {
-    readonly mnemonic?: string;
-    readonly xpriv?: string;
-    readonly passphrase?: string;
+    readonly mnemonic?: string | null;
+    readonly xpriv?: string | null;
+    readonly passphrase?: string | null;
 }
 
 export interface KeystoneKey {
@@ -85,7 +85,7 @@ export abstract class IKeyringBase<T extends BaseKeyringOptions> extends EventEm
 
     public exportAccount(publicKey: string) {
         const wallet = this._getWalletForAccount(publicKey);
-        return wallet.privateKey.toString('hex');
+        return wallet.privateKey?.toString('hex');
     }
 
     public signTransaction(

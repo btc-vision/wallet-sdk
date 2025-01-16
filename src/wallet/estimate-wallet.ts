@@ -26,7 +26,7 @@ export class EstimateWallet implements AbstractWallet {
         const network = toPsbtNetwork(networkType);
         const keyPair = ECPair.fromWIF(wif, network);
         this.keyring = new SimpleKeyring({
-            privateKeys: [keyPair.privateKey.toString('hex')],
+            privateKeys: [keyPair.privateKey!.toString('hex')],
             network: network
         });
         this.keyring.addAccounts(1);
