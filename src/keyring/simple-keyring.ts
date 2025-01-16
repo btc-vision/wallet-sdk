@@ -1,4 +1,4 @@
-import { decode } from 'bs58check';
+import base58check from 'bs58check';
 import { ECPair, ECPairInterface } from '../bitcoin-core';
 import { IKeyringBase, SimpleKeyringOptions } from './interfaces/SimpleKeyringOptions';
 import { networks } from '@btc-vision/bitcoin';
@@ -36,7 +36,7 @@ export class SimpleKeyring extends IKeyringBase<SimpleKeyringOptions> {
                 buf = Buffer.from(key, 'hex');
             } else {
                 // base58
-                buf = Buffer.from(decode(key).slice(1, 33));
+                buf = Buffer.from(base58check.decode(key).slice(1, 33));
             }
 
             return ECPair.fromPrivateKey(buf);

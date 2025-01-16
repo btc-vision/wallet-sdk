@@ -1,13 +1,36 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2015",
-    "noImplicitAny": false,
+    "target": "ESNext",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "outDir": "./lib",
+    "noImplicitAny": false,
+    "downlevelIteration": true,
+    "types": ["chrome", "node", "react", "react-dom"],
+    "allowJs": true,
+    "skipLibCheck": true,
     "esModuleInterop": true,
-    "sourceMap": true,
-    "declaration": true,
-    "skipLibCheck": true
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "jsx": "react-jsx",
+    "plugins": [
+      {
+        "transform": "typescript-transform-paths",
+        "afterDeclarations": true
+      }
+    ]
   },
-  "include": ["src/**/*","test/**/*"]
+  "exclude": ["./node_modules"],
+  "include": ["src"]
 }
