@@ -1,5 +1,4 @@
-import { Network, networks, Psbt } from '@btc-vision/bitcoin';
-import { isTaprootInput } from '@btc-vision/bitcoin/src/psbt/bip371';
+import { isTaprootInput, Network, networks, Psbt } from '@btc-vision/bitcoin';
 import { ECPairInterface } from 'ecpair';
 import { EventEmitter } from 'events';
 import { signMessageOfDeterministicECDSA, verifyMessageOfECDSA } from '../../message';

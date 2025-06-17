@@ -31,7 +31,6 @@ export function publicKeyToPayment(publicKey: string, type: AddressType, network
             network
         });
         return payments.p2sh({
-            pubkey,
             network,
             redeem: data
         });

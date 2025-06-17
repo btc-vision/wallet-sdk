@@ -1203,22 +1203,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@btc-vision/bitcoin@npm:^6.3.4":
-  version: 6.3.4
-  resolution: "@btc-vision/bitcoin@npm:6.3.4"
+"@btc-vision/bitcoin@npm:^6.4.6":
+  version: 6.4.6
+  resolution: "@btc-vision/bitcoin@npm:6.4.6"
   dependencies:
     "@babel/plugin-proposal-object-rest-spread": "npm:^7.20.7"
     "@btc-vision/logger": "npm:^1.0.6"
-    "@eslint/js": "npm:^9.17.0"
-    "@noble/hashes": "npm:^1.6.1"
-    "@noble/secp256k1": "npm:^2.1.0"
+    "@eslint/js": "npm:^9.27.0"
+    "@noble/hashes": "npm:^1.8.0"
+    "@noble/secp256k1": "npm:^2.2.3"
     assert: "npm:^2.1.0"
-    babel-loader: "npm:^9.2.1"
-    babel-plugin-transform-import-meta: "npm:^2.2.1"
+    babel-loader: "npm:^10.0.0"
+    babel-plugin-transform-import-meta: "npm:^2.3.2"
     babel-preset-react: "npm:^6.24.1"
     babelify: "npm:^10.0.0"
     bech32: "npm:^2.0.0"
     bip174: "npm:^2.1.1"
+    bip32: "npm:^4.0.0"
     browserify-zlib: "npm:^0.2.0"
     bs58check: "npm:^4.0.0"
     buffer: "npm:^6.0.3"
@@ -1227,8 +1228,8 @@ __metadata:
     gulp-logger-new: "npm:^1.0.1"
     process: "npm:^0.11.10"
     typeforce: "npm:^1.18.0"
-    varuint-bitcoin: "npm:^1.1.2"
-  checksum: 10c0/194984240d101a492ddae285778afb085ef70bdaeec851a35fba3fc7e28eaf6db538b99625c7f39a368a5b4f6e63d8ce1ff5e9449a80799f5d1661ef0a3efa05
+    varuint-bitcoin: "npm:^2.0.0"
+  checksum: 10c0/2673a17730b9fa4f02b455b442f61bd78479a36c6e20bfc571a4e8413689043dfe5574ec1dcaa40f773dcc2d9d4427eb7e0efba1975dc70026bcda4d67001e75
   languageName: node
   linkType: hard
 
@@ -1266,7 +1267,7 @@ __metadata:
     "@babel/preset-env": "npm:^7.26.0"
     "@babel/preset-typescript": "npm:^7.26.0"
     "@bitcoinerlab/secp256k1": "npm:^1.2.0"
-    "@btc-vision/bitcoin": "npm:^6.3.4"
+    "@btc-vision/bitcoin": "npm:^6.4.6"
     "@keystonehq/keystone-sdk": "npm:^0.9.1"
     "@noble/secp256k1": "npm:^2.2.2"
     "@types/bitcore-lib": "npm:^0.15.6"
@@ -1401,10 +1402,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/js@npm:9.18.0, @eslint/js@npm:^9.10.0, @eslint/js@npm:^9.17.0":
+"@eslint/js@npm:9.18.0, @eslint/js@npm:^9.10.0":
   version: 9.18.0
   resolution: "@eslint/js@npm:9.18.0"
   checksum: 10c0/3938344c5ac7feef4b73fcb30f3c3e753570cea74c24904bb5d07e9c42fcd34fcbc40f545b081356a299e11f360c9c274b348c05fb0113fc3d492e5175eee140
+  languageName: node
+  linkType: hard
+
+"@eslint/js@npm:^9.27.0":
+  version: 9.29.0
+  resolution: "@eslint/js@npm:9.29.0"
+  checksum: 10c0/d0ccf37063fa27a3fae9347cb044f84ca10b5a2fa19ffb2b3fedf3b96843ac1ff359ea9f0ab0e80f2f16fda4cb0dc61ea0fed0375090f050fe0a029e7d6de3a3
   languageName: node
   linkType: hard
 
@@ -1841,17 +1849,31 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@noble/hashes@npm:1.7.0, @noble/hashes@npm:^1.2.0, @noble/hashes@npm:^1.5.0, @noble/hashes@npm:^1.6.1":
+"@noble/hashes@npm:1.7.0, @noble/hashes@npm:^1.2.0, @noble/hashes@npm:^1.5.0":
   version: 1.7.0
   resolution: "@noble/hashes@npm:1.7.0"
   checksum: 10c0/1ef0c985ebdb5a1bd921ea6d959c90ba826af3ae05b40b459a703e2a5e9b259f190c6e92d6220fb3800e2385521e4159e238415ad3f6b79c52f91dd615e491dc
   languageName: node
   linkType: hard
 
-"@noble/secp256k1@npm:^2.1.0, @noble/secp256k1@npm:^2.2.2":
+"@noble/hashes@npm:^1.8.0":
+  version: 1.8.0
+  resolution: "@noble/hashes@npm:1.8.0"
+  checksum: 10c0/06a0b52c81a6fa7f04d67762e08b2c476a00285858150caeaaff4037356dd5e119f45b2a530f638b77a5eeca013168ec1b655db41bae3236cb2e9d511484fc77
+  languageName: node
+  linkType: hard
+
+"@noble/secp256k1@npm:^2.2.2":
   version: 2.2.3
   resolution: "@noble/secp256k1@npm:2.2.3"
   checksum: 10c0/d88c9c239ae6b1b7aeacf4212f84ab12dff51e12b1a221f52830cf275e19c66af9bd1bdbde2104090f5b1eb4325e24309eded312aa322104ec43f6c8b0877807
+  languageName: node
+  linkType: hard
+
+"@noble/secp256k1@npm:^2.2.3":
+  version: 2.3.0
+  resolution: "@noble/secp256k1@npm:2.3.0"
+  checksum: 10c0/8f455b57b10ce069e445324ce88603cf2af1b37d741d33ce1ab669b47b464f864b20ec056bbc0c1b18609d27b2e4503bb915052f3d81d357e587b322c5684dbb
   languageName: node
   linkType: hard
 
@@ -1915,6 +1937,13 @@ __metadata:
   version: 0.1.1
   resolution: "@pkgr/core@npm:0.1.1"
   checksum: 10c0/3f7536bc7f57320ab2cf96f8973664bef624710c403357429fbf680a5c3b4843c1dbd389bb43daa6b1f6f1f007bb082f5abcb76bb2b5dc9f421647743b71d3d8
+  languageName: node
+  linkType: hard
+
+"@scure/base@npm:^1.1.1":
+  version: 1.2.6
+  resolution: "@scure/base@npm:1.2.6"
+  checksum: 10c0/49bd5293371c4e062cb6ba689c8fe3ea3981b7bb9c000400dc4eafa29f56814cdcdd27c04311c2fec34de26bc373c593a1d6ca6d754398a488d587943b7c128a
   languageName: node
   linkType: hard
 
@@ -2957,6 +2986,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"babel-loader@npm:^10.0.0":
+  version: 10.0.0
+  resolution: "babel-loader@npm:10.0.0"
+  dependencies:
+    find-up: "npm:^5.0.0"
+  peerDependencies:
+    "@babel/core": ^7.12.0
+    webpack: ">=5.61.0"
+  checksum: 10c0/882dfacde3ee24b432ad57e468832cd0821e2a410f6c5b75ff945f069a8956592b28c6c357df5bb03db73d2741ec3db5febb106ac0bb3591c3d4288f2cf4df0e
+  languageName: node
+  linkType: hard
+
 "babel-loader@npm:^9.1.3, babel-loader@npm:^9.2.1":
   version: 9.2.1
   resolution: "babel-loader@npm:9.2.1"
@@ -3039,6 +3080,18 @@ __metadata:
   peerDependencies:
     "@babel/core": ^7.10.0
   checksum: 10c0/f7b895b649c038ecfdb67addf1b1feb25f39919177b460a277452af2ac7ee335cfda81da6846bcc30fc5fb05ff3011d6eb21f290c69d901f9fdc50673d48ffce
+  languageName: node
+  linkType: hard
+
+"babel-plugin-transform-import-meta@npm:^2.3.2":
+  version: 2.3.3
+  resolution: "babel-plugin-transform-import-meta@npm:2.3.3"
+  dependencies:
+    "@babel/template": "npm:^7.25.9"
+    tslib: "npm:^2.8.1"
+  peerDependencies:
+    "@babel/core": ^7.10.0
+  checksum: 10c0/184275ef4f1c14a79e46fa2084e5743fbcfbaa52a9372f713e0e97e45aab4ac5be214c7eb4893fb9ea0088d32913772651776c660bee38bd2c8d52ef92750c07
   languageName: node
   linkType: hard
 
@@ -3260,6 +3313,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bip32@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "bip32@npm:4.0.0"
+  dependencies:
+    "@noble/hashes": "npm:^1.2.0"
+    "@scure/base": "npm:^1.1.1"
+    typeforce: "npm:^1.11.5"
+    wif: "npm:^2.0.6"
+  checksum: 10c0/b74ffd3a96b42a783eca6455dff8f0decc8360025b69d486d5a047b52cca6e8436bc5a9812cbeae2638a50f35da7fcd85b55cfe58272f55a5b31d7ac40a25522
+  languageName: node
+  linkType: hard
+
 "bip39@npm:^3.1.0":
   version: 3.1.0
   resolution: "bip39@npm:3.1.0"
@@ -3284,8 +3349,8 @@ __metadata:
   linkType: hard
 
 "bitcore-lib@npm:^10.7.0":
-  version: 10.7.0
-  resolution: "bitcore-lib@npm:10.7.0"
+  version: 10.9.0
+  resolution: "bitcore-lib@npm:10.9.0"
   dependencies:
     bech32: "npm:=2.0.0"
     bn.js: "npm:=4.11.8"
@@ -3294,7 +3359,7 @@ __metadata:
     elliptic: "npm:^6.5.3"
     inherits: "npm:=2.0.1"
     lodash: "npm:^4.17.20"
-  checksum: 10c0/f2bfbe1be8b239778729851bffdd7fbc27de69b8f955ef5bd6b4d59188c9909189dbfa90de4dd0a1365e831017bb1eb777ddbb3baa97f7907dd56e207f04be31
+  checksum: 10c0/800ca38fedafc4b8559181e7cde6e25d4191493313fcafcc56d6ac2f94fdce0291b8f06ff284843c2b4a99c225ad65a3777df7d4b884386447d66b560b726a46
   languageName: node
   linkType: hard
 
@@ -9269,7 +9334,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typeforce@npm:^1.11.3, typeforce@npm:^1.18.0":
+"typeforce@npm:^1.11.3, typeforce@npm:^1.11.5, typeforce@npm:^1.18.0":
   version: 1.18.0
   resolution: "typeforce@npm:1.18.0"
   checksum: 10c0/011f57effd9ae6d3dd8bb249e09b4ecadb2c2a3f803b27f977ac8b7782834855930bff971ba549bcd5a8cedc8136d8a977c0b7e050cc67deded948181b7ba3e8
@@ -9293,6 +9358,13 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 10c0/6fd7e0ed3bf23a81246878c613423730c40e8bdbfec4c6e4d7bf1b847cbb39076e56ad5f50aa9d7ebd89877999abaee216002d3f2818885e41c907caaa192cc4
+  languageName: node
+  linkType: hard
+
+"uint8array-tools@npm:^0.0.8":
+  version: 0.0.8
+  resolution: "uint8array-tools@npm:0.0.8"
+  checksum: 10c0/ffc01a50aaed4ce7d9c30260b23465c79ffe6e4d0fe1ba4605611e59feabbaff81b42ddf7896a747f07aafcbb5a4252d1b39f2325bacb21454212c42c954d74d
   languageName: node
   linkType: hard
 
@@ -9526,6 +9598,15 @@ __metadata:
   dependencies:
     safe-buffer: "npm:^5.1.1"
   checksum: 10c0/3d38f8de8192b7a4fc00abea01ed189f1e1e6aee1ebc4192040c5717d2483e0a6a73873fcf6b3c1910d947d338b671470505705fe40c765dc832255dfa2d4210
+  languageName: node
+  linkType: hard
+
+"varuint-bitcoin@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "varuint-bitcoin@npm:2.0.0"
+  dependencies:
+    uint8array-tools: "npm:^0.0.8"
+  checksum: 10c0/63048ddcf85ef728ec610d234a1de010ce81204751d7d1a54eca9f140a86c30bb187cd4871ee042ce9e656d76ee50093a7370c56114ae6716297ef32de4a8b26
   languageName: node
   linkType: hard
 
