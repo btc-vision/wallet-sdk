@@ -63,7 +63,7 @@ export function getSignatureFromPsbtOfBIP322Simple(psbt: bitcoin.Psbt) {
         return Buffer.concat([encode(b.byteLength), b]);
     }
 
-    const len = encode(txToSign.ins[0].witness.length);
+    const len = encode(txToSign.ins[0].witness.length).buffer;
     const result = Buffer.concat([len, ...txToSign.ins[0].witness.map((w) => encodeVarString(w))]);
     const signature = result.toString('base64');
 

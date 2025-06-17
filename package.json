@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/wallet-sdk",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "OP_WALLET SDK",
     "keywords": [
         "bitcoin",
@@ -33,7 +33,7 @@
     },
     "dependencies": {
         "@bitcoinerlab/secp256k1": "^1.2.0",
-        "@btc-vision/bitcoin": "^6.3.5",
+        "@btc-vision/bitcoin": "^6.4.6",
         "@keystonehq/keystone-sdk": "^0.9.1",
         "@noble/secp256k1": "^2.2.2",
         "big-integer": "^1.6.52",
