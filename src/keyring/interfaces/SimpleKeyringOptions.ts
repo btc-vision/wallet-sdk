@@ -77,9 +77,9 @@ export abstract class IKeyringBase<T extends BaseKeyringOptions> extends EventEm
 
     public abstract getAccounts(): string[];
 
-    public signMessage(publicKey: string, text: string): string {
+    public signMessage(publicKey: string, message: string | Buffer): string {
         const keyPair = this._getPrivateKeyFor(publicKey);
-        return signMessageOfDeterministicECDSA(keyPair, text);
+        return signMessageOfDeterministicECDSA(keyPair, message);
     }
 
     public exportAccount(publicKey: string) {

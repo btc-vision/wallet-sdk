@@ -29,9 +29,9 @@ function varintBufNum(n: number) {
     return buf;
 }
 
-function magicHash(message: string) {
+function magicHash(message: string | Buffer) {
     const prefix1 = varintBufNum(MAGIC_BYTES.length);
-    const messageBuffer = Buffer.from(message);
+    const messageBuffer = typeof message === 'string' ? Buffer.from(message) : message;
     const prefix2 = varintBufNum(messageBuffer.length);
     const buf = Buffer.concat([prefix1, MAGIC_BYTES, prefix2, messageBuffer]);
     return bitcoin.crypto.hash256(buf);
@@ -49,7 +49,7 @@ function toCompact(i: number, signature: Uint8Array, compressed: boolean) {
     return Buffer.concat([Uint8Array.of(val), Uint8Array.from(signature)]);
 }
 
-export function signMessageOfDeterministicECDSA(ecpair: ECPairInterface, message: string): string {
+export function signMessageOfDeterministicECDSA(ecpair: ECPairInterface, message: string | Buffer): string {
     const hash = magicHash(message);
 
     const privateKey = ecpair.privateKey!.toString('hex');
