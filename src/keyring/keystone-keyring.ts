@@ -370,7 +370,7 @@ export class KeystoneKeyring extends IKeyringBase<DeserializeOptionKeystone> {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public signMessage(publicKey: string, text: string): string {
+    public signMessage(publicKey: string, message: string | Buffer): string {
         return 'Signing Message with Keystone should use genSignMsgUr and parseSignMsgUr';
     }
 

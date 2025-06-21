@@ -91,17 +91,17 @@ export class EstimateWallet implements AbstractWallet {
         return pubkeys[0];
     }
 
-    async signMessage(text: string, type: 'bip322-simple' | 'ecdsa'): Promise<string> {
+    async signMessage(message: string | Buffer, type: 'bip322-simple' | 'ecdsa'): Promise<string> {
         if (type === 'bip322-simple') {
             return await signMessageOfBIP322Simple({
-                message: text,
+                message,
                 address: this.address,
                 networkType: this.networkType,
                 wallet: this
             });
         } else {
             const pubkey = await this.getPublicKey();
-            return await this.keyring.signMessage(pubkey, text);
+            return this.keyring.signMessage(pubkey, message);
         }
     }
 

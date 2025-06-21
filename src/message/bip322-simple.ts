@@ -6,11 +6,12 @@ import { AddressType } from '../types';
 import { schnorrValidator, validator } from '../utils';
 import { AbstractWallet } from '../wallet';
 
-function bip0322_hash(message: string) {
+function bip0322_hash(message: string | Buffer): string {
     const { sha256 } = bitcoin.crypto;
     const tag = 'BIP0322-signed-message';
     const tagHash = sha256(Buffer.from(tag));
-    const result = sha256(Buffer.concat([tagHash, tagHash, Buffer.from(message)]));
+    const messageBuffer = typeof message === 'string' ? Buffer.from(message, 'utf8') : message;
+    const result = sha256(Buffer.concat([tagHash, tagHash, messageBuffer]));
     return result.toString('hex');
 }
 
@@ -19,7 +20,7 @@ export function genPsbtOfBIP322Simple({
     address,
     networkType
 }: {
-    message: string;
+    message: string | Buffer;
     address: string;
     networkType: NetworkType;
 }) {
@@ -59,11 +60,14 @@ export function genPsbtOfBIP322Simple({
 export function getSignatureFromPsbtOfBIP322Simple(psbt: bitcoin.Psbt) {
     const txToSign = psbt.extractTransaction();
 
-    function encodeVarString(b) {
-        return Buffer.concat([encode(b.byteLength), b]);
+    function encodeVarString(b: Buffer): Buffer {
+        const { buffer: vb } = encode(b.length);
+        return Buffer.concat([Buffer.from(vb), b]);
     }
 
-    const len = encode(txToSign.ins[0].witness.length).buffer;
+    const { buffer: varintBuf } = encode(txToSign.ins[0].witness.length);
+    const len = Buffer.from(varintBuf);
+
     const result = Buffer.concat([len, ...txToSign.ins[0].witness.map((w) => encodeVarString(w))]);
     const signature = result.toString('base64');
 
@@ -79,7 +83,7 @@ export async function signMessageOfBIP322Simple({
     networkType,
     wallet
 }: {
-    message: string;
+    message: string | Buffer;
     address: string;
     networkType: NetworkType;
     wallet: AbstractWallet;
