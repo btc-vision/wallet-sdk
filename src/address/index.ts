@@ -116,7 +116,7 @@ export function decodeAddress(address: string) {
                 addressType,
                 dust: getAddressTypeDust(addressType)
             };
-        } catch (e) {}
+        } catch {}
     } else {
         try {
             decodeBase58 = bitcoin.address.fromBase58Check(address);
@@ -146,7 +146,7 @@ export function decodeAddress(address: string) {
                 addressType,
                 dust: getAddressTypeDust(addressType)
             };
-        } catch (e) {}
+        } catch {}
     }
 
     return {
@@ -185,7 +185,7 @@ export function scriptPkToAddress(scriptPk: string | Buffer, networkType: Networ
             network
         );
         return address;
-    } catch (e) {
+    } catch {
         return '';
     }
 }
