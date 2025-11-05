@@ -11,7 +11,6 @@ function tapTweakHash(pubKey: Buffer, h: Buffer | undefined): Buffer {
  * Transform raw private key to taproot address private key
  */
 export function tweakSigner(signer: bitcoin.Signer, opts: any = {}): bitcoin.Signer {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     let privateKey: Uint8Array | undefined = signer.privateKey!;
     if (!privateKey) {

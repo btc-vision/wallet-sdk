@@ -37,18 +37,6 @@ function magicHash(message: string | Buffer) {
     return bitcoin.crypto.hash256(buf);
 }
 
-function toCompact(i: number, signature: Uint8Array, compressed: boolean) {
-    if (!(i === 0 || i === 1 || i === 2 || i === 3)) {
-        throw new Error('i must be equal to 0, 1, 2, or 3');
-    }
-
-    let val = i + 27 + 4;
-    if (!compressed) {
-        val = val - 4;
-    }
-    return Buffer.concat([Uint8Array.of(val), Uint8Array.from(signature)]);
-}
-
 export function signMessageOfDeterministicECDSA(ecpair: ECPairInterface, message: string | Buffer): string {
     const hash = magicHash(message);
 
