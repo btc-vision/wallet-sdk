@@ -1,69 +1,401 @@
-import { networks } from '@btc-vision/bitcoin';
-import * as bs58check from 'bs58check';
-import { ECPair, ECPairInterface } from '../bitcoin-core';
-import { IKeyringBase, SimpleKeyringOptions } from './interfaces/SimpleKeyringOptions';
+/**
+ * OPNet Wallet SDK - Simple Keyring
+ * Single key pair management with quantum-resistant (ML-DSA) support.
+ * For WIF/private key imports, requires either:
+ * 1. A quantum private key to be assigned on import
+ * 2. Generation of a fresh quantum key pair
+ */
 
-const type = 'Simple Key Pair';
+import { crypto as bitcoinCrypto, isTaprootInput, type Network, networks, Psbt } from '@btc-vision/bitcoin';
+import {
+    AddressTypes,
+    EcKeyPair,
+    MLDSASecurityLevel,
+    QuantumBIP32Factory,
+    type QuantumBIP32Interface
+} from '@btc-vision/transaction';
+import type { ECPairInterface } from 'ecpair';
+import { publicKeyToAddress } from '@/address';
+import type { AccountAddresses, SimpleKeyringOptions, ToSignInput } from '@/types';
 
-export class SimpleKeyring extends IKeyringBase<SimpleKeyringOptions> {
-    static type = type;
-    type = type;
+/**
+ * Simple Keyring for single key pair management with quantum support.
+ * When importing from WIF or private key, a quantum key must be provided or generated.
+ */
+export class SimpleKeyring {
+    public static readonly type = 'Simple Key Pair';
+    public readonly type = SimpleKeyring.type;
 
-    constructor(opts?: SimpleKeyringOptions) {
-        super(opts?.network || networks.bitcoin);
+    private readonly network: Network;
+    private readonly securityLevel: MLDSASecurityLevel;
+    private keypair: ECPairInterface | null = null;
+    private quantumKeypair: QuantumBIP32Interface | null = null;
+    private chainCode: Buffer = Buffer.alloc(32);
 
-        if (opts && opts.privateKeys) {
-            this.deserialize(opts as SimpleKeyringOptions);
+    constructor(options?: SimpleKeyringOptions) {
+        this.network = options?.network ?? networks.bitcoin;
+        this.securityLevel = options?.securityLevel ?? MLDSASecurityLevel.LEVEL2;
+
+        if (options?.privateKey !== undefined) {
+            this.importPrivateKey(options.privateKey, options.quantumPrivateKey);
         }
     }
 
-    public serialize(): SimpleKeyringOptions {
+    /**
+     * Generate a new random key pair with quantum support
+     */
+    public static generate(
+        network: Network = networks.bitcoin,
+        securityLevel: MLDSASecurityLevel = MLDSASecurityLevel.LEVEL2
+    ): SimpleKeyring {
+        const keyring = new SimpleKeyring({ network, securityLevel, privateKey: '' });
+
+        // Generate random classical keypair
+        keyring.keypair = EcKeyPair.generateRandomKeyPair(network);
+
+        // Generate random quantum keypair
+        const seed = Buffer.from(crypto.getRandomValues(new Uint8Array(64)));
+        keyring.quantumKeypair = QuantumBIP32Factory.fromSeed(seed, network, securityLevel);
+        keyring.chainCode = Buffer.from(keyring.quantumKeypair.chainCode);
+
+        return keyring;
+    }
+
+    /**
+     * Import from WIF (Wallet Import Format) with mandatory quantum key
+     */
+    public static fromWIF(
+        wif: string,
+        quantumPrivateKey: string | undefined,
+        network: Network = networks.bitcoin,
+        securityLevel: MLDSASecurityLevel = MLDSASecurityLevel.LEVEL2
+    ): SimpleKeyring {
+        const keyring = new SimpleKeyring({ network, securityLevel, privateKey: '' });
+        keyring.keypair = EcKeyPair.fromWIF(wif, network);
+
+        if (quantumPrivateKey !== undefined && quantumPrivateKey !== '') {
+            keyring.importQuantumKey(quantumPrivateKey);
+        } else {
+            keyring.generateFreshQuantumKey();
+        }
+
+        return keyring;
+    }
+
+    /**
+     * Import from hex private key with mandatory quantum key
+     */
+    public static fromPrivateKey(
+        privateKeyHex: string,
+        quantumPrivateKey: string | undefined,
+        network: Network = networks.bitcoin,
+        securityLevel: MLDSASecurityLevel = MLDSASecurityLevel.LEVEL2
+    ): SimpleKeyring {
+        const keyring = new SimpleKeyring({ network, securityLevel, privateKey: '' });
+        const privateKeyBuffer = Buffer.from(privateKeyHex, 'hex');
+        keyring.keypair = EcKeyPair.fromPrivateKey(privateKeyBuffer, network);
+
+        if (quantumPrivateKey !== undefined && quantumPrivateKey !== '') {
+            keyring.importQuantumKey(quantumPrivateKey);
+        } else {
+            keyring.generateFreshQuantumKey();
+        }
+
+        return keyring;
+    }
+
+    /**
+     * Import a private key (WIF or hex format)
+     */
+    public importPrivateKey(privateKey: string, quantumPrivateKey?: string): void {
+        if (privateKey === '') {
+            return;
+        }
+
+        // Determine if WIF or hex
+        if (privateKey.length === 64) {
+            // Hex format
+            const privateKeyBuffer = Buffer.from(privateKey, 'hex');
+            this.keypair = EcKeyPair.fromPrivateKey(privateKeyBuffer, this.network);
+        } else {
+            // WIF format
+            this.keypair = EcKeyPair.fromWIF(privateKey, this.network);
+        }
+
+        if (quantumPrivateKey !== undefined && quantumPrivateKey !== '') {
+            this.importQuantumKey(quantumPrivateKey);
+        } else {
+            this.generateFreshQuantumKey();
+        }
+    }
+
+    /**
+     * Import an existing quantum private key
+     */
+    public importQuantumKey(quantumPrivateKeyHex: string): void {
+        const privateKeyBytes = Buffer.from(quantumPrivateKeyHex, 'hex');
+
+        // Extract chain code from the end of the key if present
+        // Format: privateKey + chainCode (32 bytes)
+        if (privateKeyBytes.length > 32) {
+            this.chainCode = privateKeyBytes.subarray(-32);
+            const keyWithoutChainCode = privateKeyBytes.subarray(0, -32);
+            this.quantumKeypair = QuantumBIP32Factory.fromPrivateKey(
+                keyWithoutChainCode,
+                this.chainCode,
+                this.network,
+                this.securityLevel
+            );
+        } else {
+            // Generate a deterministic chain code from the key
+            this.chainCode = Buffer.from(crypto.getRandomValues(new Uint8Array(32)));
+            this.quantumKeypair = QuantumBIP32Factory.fromPrivateKey(
+                privateKeyBytes,
+                this.chainCode,
+                this.network,
+                this.securityLevel
+            );
+        }
+    }
+
+    /**
+     * Generate a fresh quantum key pair
+     */
+    public generateFreshQuantumKey(): void {
+        const seed = Buffer.from(crypto.getRandomValues(new Uint8Array(64)));
+        this.quantumKeypair = QuantumBIP32Factory.fromSeed(seed, this.network, this.securityLevel);
+        this.chainCode = Buffer.from(this.quantumKeypair.chainCode);
+    }
+
+    /**
+     * Check if keyring has keys
+     */
+    public hasKeys(): boolean {
+        return this.keypair !== null && this.quantumKeypair !== null;
+    }
+
+    /**
+     * Get the classical public key
+     */
+    public getPublicKey(): string {
+        if (this.keypair === null) {
+            throw new Error('SimpleKeyring: No keypair initialized');
+        }
+        return this.keypair.publicKey.toString('hex');
+    }
+
+    /**
+     * Get the quantum public key
+     */
+    public getQuantumPublicKey(): string {
+        if (this.quantumKeypair === null) {
+            throw new Error('SimpleKeyring: No quantum keypair initialized');
+        }
+        return Buffer.from(this.quantumKeypair.publicKey).toString('hex');
+    }
+
+    /**
+     * Get the quantum public key hash (universal identifier)
+     */
+    public getQuantumPublicKeyHash(): string {
+        if (this.quantumKeypair === null) {
+            throw new Error('SimpleKeyring: No quantum keypair initialized');
+        }
+        // SHA256 hash of the quantum public key
+        const hash = bitcoinCrypto.sha256(Buffer.from(this.quantumKeypair.publicKey));
+        return hash.toString('hex');
+    }
+
+    /**
+     * Get all accounts (returns array with single public key)
+     */
+    public getAccounts(): string[] {
+        if (this.keypair === null) {
+            return [];
+        }
+        return [this.getPublicKey()];
+    }
+
+    /**
+     * Get addresses for the key pair
+     */
+    public getAddresses(): AccountAddresses {
+        if (this.keypair === null) {
+            throw new Error('SimpleKeyring: No keypair initialized');
+        }
+
+        const pubkey = this.keypair.publicKey;
+
         return {
-            privateKeys: this.wallets.map((wallet) => wallet.privateKey!.toString('hex')),
-            network: this.network
+            p2pkh: publicKeyToAddress(pubkey, AddressTypes.P2PKH, this.network),
+            p2wpkh: publicKeyToAddress(pubkey, AddressTypes.P2WPKH, this.network),
+            p2tr: publicKeyToAddress(pubkey, AddressTypes.P2TR, this.network),
+            p2shP2wpkh: publicKeyToAddress(pubkey, AddressTypes.P2SH_OR_P2SH_P2WPKH, this.network)
         };
     }
 
-    public deserialize(opts: SimpleKeyringOptions): void {
-        if (Array.isArray(opts)) {
-            opts = { privateKeys: opts }; // compatibility
+    /**
+     * Get an address for a specific type
+     */
+    public getAddress(addressType: AddressTypes): string {
+        if (this.keypair === null) {
+            throw new Error('SimpleKeyring: No keypair initialized');
+        }
+        return publicKeyToAddress(this.keypair.publicKey, addressType, this.network);
+    }
+
+    /**
+     * Export the classical private key
+     */
+    public exportPrivateKey(): string {
+        if (this.keypair?.privateKey === undefined) {
+            throw new Error('SimpleKeyring: No private key available');
+        }
+        return Buffer.from(this.keypair.privateKey).toString('hex');
+    }
+
+    /**
+     * Export the quantum private key with chain code
+     */
+    public exportQuantumPrivateKey(): string {
+        if (this.quantumKeypair?.privateKey === undefined) {
+            throw new Error('SimpleKeyring: No quantum private key available');
+        }
+        // Combine private key and chain code for full export
+        const privateKey = Buffer.from(this.quantumKeypair.privateKey);
+        return Buffer.concat([privateKey, this.chainCode]).toString('hex');
+    }
+
+    /**
+     * Export WIF format
+     */
+    public exportWIF(): string {
+        if (this.keypair === null) {
+            throw new Error('SimpleKeyring: No keypair initialized');
+        }
+        return this.keypair.toWIF();
+    }
+
+    /**
+     * Sign a PSBT transaction
+     */
+    public signTransaction(psbt: Psbt, inputs: readonly ToSignInput[]): Psbt {
+        if (this.keypair === null) {
+            throw new Error('SimpleKeyring: No keypair initialized');
         }
 
-        this.wallets = opts.privateKeys!.map((key) => {
-            let buf: Buffer;
-            if (key.length === 64) {
-                // privateKey
-                buf = Buffer.from(key, 'hex');
-            } else {
-                // base58
-                buf = Buffer.from(bs58check.default.decode(key).slice(1, 33));
+        for (const input of inputs) {
+            const psbtInput = psbt.data.inputs[input.index];
+
+            if (psbtInput === undefined) {
+                throw new Error(`SimpleKeyring: Input at index ${input.index} not found`);
             }
 
-            return ECPair.fromPrivateKey(buf);
-        });
-    }
-
-    public addAccounts(n = 1): string[] {
-        const newWallets: ECPairInterface[] = [];
-        for (let i = 0; i < n; i++) {
-            newWallets.push(ECPair.makeRandom());
+            if (isTaprootInput(psbtInput) && input.disableTweakSigner !== true) {
+                const tweakedSigner = this.keypair.tweak(Buffer.from(this.keypair.publicKey.subarray(1, 33)));
+                psbt.signInput(input.index, tweakedSigner, input.sighashTypes as number[] | undefined);
+            } else {
+                psbt.signInput(input.index, this.keypair, input.sighashTypes as number[] | undefined);
+            }
         }
-        this.wallets = this.wallets.concat(newWallets);
-        return newWallets.map(({ publicKey }) => publicKey.toString('hex'));
+
+        return psbt;
     }
 
-    public getAccounts(): string[] {
-        return this.wallets.map(({ publicKey }) => publicKey.toString('hex'));
-    }
-}
+    /**
+     * Sign arbitrary data with ECDSA or Schnorr
+     */
+    public signData(data: string, type: 'ecdsa' | 'schnorr' = 'ecdsa'): string {
+        if (this.keypair === null) {
+            throw new Error('SimpleKeyring: No keypair initialized');
+        }
 
-export function verifySignData(publicKey: string, hash: string, type: 'ecdsa' | 'schnorr', signature: string) {
-    const keyPair = ECPair.fromPublicKey(Buffer.from(publicKey, 'hex'));
-    if (type === 'ecdsa') {
-        return keyPair.verify(Buffer.from(hash, 'hex'), Buffer.from(signature, 'hex'));
-    } else if (type === 'schnorr') {
-        return keyPair.verifySchnorr(Buffer.from(hash, 'hex'), Buffer.from(signature, 'hex'));
-    } else {
-        throw new Error('Not support type');
+        const dataBuffer = Buffer.from(data, 'hex');
+
+        if (type === 'ecdsa') {
+            return Buffer.from(this.keypair.sign(dataBuffer)).toString('hex');
+        } else {
+            return Buffer.from(this.keypair.signSchnorr(dataBuffer)).toString('hex');
+        }
+    }
+
+    /**
+     * Verify a signature
+     */
+    public verify(data: string, signature: string, type: 'ecdsa' | 'schnorr' = 'ecdsa'): boolean {
+        if (this.keypair === null) {
+            throw new Error('SimpleKeyring: No keypair initialized');
+        }
+
+        const dataBuffer = Buffer.from(data, 'hex');
+        const signatureBuffer = Buffer.from(signature, 'hex');
+
+        if (type === 'ecdsa') {
+            return this.keypair.verify(dataBuffer, signatureBuffer);
+        } else {
+            return this.keypair.verifySchnorr(dataBuffer, signatureBuffer);
+        }
+    }
+
+    /**
+     * Get the keypair
+     */
+    public getKeypair(): ECPairInterface {
+        if (this.keypair === null) {
+            throw new Error('SimpleKeyring: No keypair initialized');
+        }
+        return this.keypair;
+    }
+
+    /**
+     * Get the quantum keypair
+     */
+    public getQuantumKeypair(): QuantumBIP32Interface {
+        if (this.quantumKeypair === null) {
+            throw new Error('SimpleKeyring: No quantum keypair initialized');
+        }
+        return this.quantumKeypair;
+    }
+
+    /**
+     * Get the chain code
+     */
+    public getChainCode(): Buffer {
+        return this.chainCode;
+    }
+
+    /**
+     * Get the security level
+     */
+    public getSecurityLevel(): MLDSASecurityLevel {
+        return this.securityLevel;
+    }
+
+    /**
+     * Get the network
+     */
+    public getNetwork(): Network {
+        return this.network;
+    }
+
+    /**
+     * Serialize the keyring state (excludes private keys for safety)
+     */
+    public serialize(): SimpleKeyringOptions {
+        return {
+            privateKey: this.exportPrivateKey(),
+            quantumPrivateKey: this.exportQuantumPrivateKey(),
+            network: this.network,
+            securityLevel: this.securityLevel
+        };
+    }
+
+    /**
+     * Remove the key (clear keyring)
+     */
+    public clear(): void {
+        this.keypair = null;
+        this.quantumKeypair = null;
+        this.chainCode = Buffer.alloc(32);
     }
 }

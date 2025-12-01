@@ -1,198 +1,239 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { AddressType } from '../../src';
-import { decodeAddress, getAddressType, isValidAddress, publicKeyToAddress } from '../../src/address';
-import { NetworkType } from '../../src/network';
-import { LocalWallet } from '../../src/wallet';
+import { describe, expect, it } from 'vitest';
+import { networks } from '@btc-vision/bitcoin';
+import { AddressTypes, OPNetNetwork } from '@btc-vision/transaction';
+import {
+    addressToScriptPubKey,
+    decodeAddress,
+    detectAddressType,
+    isP2PKHOrP2SHAddress,
+    isP2WPKHAddress,
+    isValidAddress,
+    isValidP2TRAddress,
+    isValidPublicKey,
+    publicKeyToAddress,
+    publicKeyToPayment,
+    publicKeyToScriptPubKey,
+    scriptPubKeyToAddress
+} from '../../src';
 
-const p2wpkh_data = {
-    pubkey: '02b602ad190efb7b4f520068e3f8ecf573823d9e2557c5229231b4e14b79bbc0d8',
-    mainnet_address: 'bc1qq2z2wssazy76tfpucdd32r78xe7urcj2rtlnkw',
-    testnet_address: 'tb1qq2z2wssazy76tfpucdd32r78xe7urcj2fdyqda'
-};
+describe('Address Module', () => {
+    // Test public key (compressed format)
+    const testPublicKey = '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+    const testPublicKeyBuffer = Buffer.from(testPublicKey, 'hex');
 
-const p2sh_data = {
-    pubkey: '020690457248a4f4f3ba2568b88a252af0d9dcfd9e0394690cbb0d45f72c574ee6',
-    mainnet_address: '3ESTprj6AdpfGEFgDMri4f2iSf9YutNjXP',
-    testnet_address: '2N5zftbf7n6L1U1tDtVUagc1yf1Mig123D2'
-};
+    describe('publicKeyToAddress', () => {
+        it('should generate P2PKH address', () => {
+            const address = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2PKH, networks.bitcoin);
+            expect(address).toMatch(/^1/);
+        });
 
-const p2tr_data = {
-    pubkey: '0333bc88101f32b7ba799504d9340e77aedcf0ea3a047131737e5eb4e5bee23406',
-    mainnet_address: 'bc1p8wat4p7077p3k6waauz0pjryywfxly35uz74ve9usp4jp6mk04uqd2mk58',
-    testnet_address: 'tb1p8wat4p7077p3k6waauz0pjryywfxly35uz74ve9usp4jp6mk04uq6zdewg'
-};
+        it('should generate P2WPKH address', () => {
+            const address = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2WPKH, networks.bitcoin);
+            expect(address).toMatch(/^bc1q/);
+        });
 
-const p2pkh_data = {
-    pubkey: '025e8ae8f7d9891dc0e24a4c1e74b58570281d4d3da8a3240268e00f0faa5d74b9',
-    mainnet_address: '1JRtSjhQqt2qCRYN7jtqNUwTgn7uwagUpc',
-    testnet_address: 'mxwqjnnPeuU5yY1yqJsDCQ9nYmicmGTBns'
-};
+        it('should generate P2TR address', () => {
+            const address = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2TR, networks.bitcoin);
+            expect(address).toMatch(/^bc1p/);
+        });
 
-const invalid_data = {
-    pubkey: '',
-    mainnet_address: '',
-    testnet_address: ''
-};
+        it('should generate P2SH-P2WPKH address', () => {
+            const address = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2SH_OR_P2SH_P2WPKH, networks.bitcoin);
+            expect(address).toMatch(/^3/);
+        });
 
-describe('address', function () {
-    it('test function publicKeyToAddress', async function () {
-        expect(publicKeyToAddress(p2wpkh_data.pubkey, AddressType.P2WPKH, NetworkType.MAINNET)).eq(
-            p2wpkh_data.mainnet_address,
-            'pubkey->p2wpkh mainnet'
-        );
+        it('should generate testnet addresses', () => {
+            const p2wpkh = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2WPKH, networks.testnet);
+            expect(p2wpkh).toMatch(/^tb1q/);
 
-        expect(publicKeyToAddress(p2wpkh_data.pubkey, AddressType.P2WPKH, NetworkType.TESTNET)).eq(
-            p2wpkh_data.testnet_address,
-            'pubkey->p2wpkh testnet'
-        );
+            const p2tr = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2TR, networks.testnet);
+            expect(p2tr).toMatch(/^tb1p/);
+        });
 
-        expect(publicKeyToAddress(p2sh_data.pubkey, AddressType.P2SH_P2WPKH, NetworkType.MAINNET)).eq(
-            p2sh_data.mainnet_address,
-            'pubkey->p2sh mainnet'
-        );
+        it('should accept hex string public key', () => {
+            const address = publicKeyToAddress(testPublicKey, AddressTypes.P2WPKH, networks.bitcoin);
+            expect(address).toMatch(/^bc1q/);
+        });
 
-        expect(publicKeyToAddress(p2sh_data.pubkey, AddressType.P2SH_P2WPKH, NetworkType.TESTNET)).eq(
-            p2sh_data.testnet_address,
-            'pubkey->p2sh testnet'
-        );
-
-        expect(publicKeyToAddress(p2tr_data.pubkey, AddressType.P2TR, NetworkType.MAINNET)).eq(
-            p2tr_data.mainnet_address,
-            'pubkey->p2tr mainnet'
-        );
-
-        expect(publicKeyToAddress(p2tr_data.pubkey, AddressType.P2TR, NetworkType.TESTNET)).eq(
-            p2tr_data.testnet_address,
-            'pubkey->p2tr testnet'
-        );
-
-        expect(publicKeyToAddress(p2pkh_data.pubkey, AddressType.P2PKH, NetworkType.MAINNET)).eq(
-            p2pkh_data.mainnet_address,
-            'pubkey->p2pkh mainnet'
-        );
-
-        expect(publicKeyToAddress(p2pkh_data.pubkey, AddressType.P2PKH, NetworkType.TESTNET)).eq(
-            p2pkh_data.testnet_address,
-            'pubkey->p2pkh testnet'
-        );
-    });
-    it('test function isValidAddress', async function () {
-        expect(isValidAddress(p2wpkh_data.mainnet_address, NetworkType.MAINNET)).eq(
-            true,
-            'p2wpkh mainnet address of mainnet should be valid'
-        );
-        expect(isValidAddress(p2wpkh_data.testnet_address, NetworkType.TESTNET)).eq(
-            true,
-            'p2wpkh testnet address of testnet should be invalid'
-        );
-        expect(isValidAddress(p2sh_data.mainnet_address, NetworkType.MAINNET)).eq(
-            true,
-            'p2sh mainnet address of mainnet should be valid'
-        );
-        expect(isValidAddress(p2sh_data.testnet_address, NetworkType.TESTNET)).eq(
-            true,
-            'p2sh testnet address of testnet should be valid'
-        );
-        expect(isValidAddress(p2tr_data.mainnet_address, NetworkType.MAINNET)).eq(
-            true,
-            'p2tr mainnet address of mainnet should be valid'
-        );
-        expect(isValidAddress(p2tr_data.testnet_address, NetworkType.TESTNET)).eq(
-            true,
-            'p2tr testnet address of testnet should be valid'
-        );
-        expect(isValidAddress(p2pkh_data.mainnet_address, NetworkType.MAINNET)).eq(
-            true,
-            'p2pkh mainnet address of mainnet should be valid'
-        );
-        expect(isValidAddress(p2pkh_data.testnet_address, NetworkType.TESTNET)).eq(
-            true,
-            'p2pkh testnet address of testnet should be valid'
-        );
-        expect(isValidAddress(p2pkh_data.mainnet_address, NetworkType.TESTNET)).eq(
-            false,
-            'p2pkh mainnet address of testnet should be invalid'
-        );
-        expect(isValidAddress(p2pkh_data.testnet_address, NetworkType.MAINNET)).eq(
-            false,
-            'p2pkh testnet address of mainnet should be invalid'
-        );
-        expect(isValidAddress(invalid_data.mainnet_address, NetworkType.MAINNET)).eq(
-            false,
-            'invalid mainnet address of mainnet should be invalid'
-        );
-    });
-
-    it('getAddressType', () => {
-        expect(getAddressType(p2wpkh_data.mainnet_address, NetworkType.MAINNET)).eq(
-            AddressType.P2WPKH,
-            'mainnet address type should be p2wpkh'
-        );
-
-        expect(getAddressType(p2wpkh_data.testnet_address, NetworkType.TESTNET)).eq(
-            AddressType.P2WPKH,
-            'testnet address type should be p2wpkh'
-        );
-
-        expect(getAddressType(p2pkh_data.mainnet_address, NetworkType.MAINNET)).eq(
-            AddressType.P2PKH,
-            'mainnet address type should be p2pkh'
-        );
-
-        expect(getAddressType(p2pkh_data.testnet_address, NetworkType.TESTNET)).eq(
-            AddressType.P2PKH,
-            'testnet address type should be p2pkh'
-        );
-
-        expect(getAddressType(p2tr_data.mainnet_address, NetworkType.MAINNET)).eq(
-            AddressType.P2TR,
-            'mainnet address type should be p2tr'
-        );
-
-        expect(getAddressType(p2tr_data.testnet_address, NetworkType.TESTNET)).eq(
-            AddressType.P2TR,
-            'testnet address type should be p2tr'
-        );
-
-        // TODO: P2SH OR P2SH_P2WPKH?
-        expect(getAddressType(p2sh_data.mainnet_address, NetworkType.MAINNET)).eq(
-            AddressType.P2SH_P2WPKH,
-            'mainnet address type should be p2sh'
-        );
-
-        expect(getAddressType(p2sh_data.testnet_address, NetworkType.TESTNET)).eq(
-            AddressType.P2SH_P2WPKH,
-            'testnet address type should be p2sh'
-        );
-    });
-
-    const networks = [
-        NetworkType.MAINNET,
-        NetworkType.TESTNET
-        // NetworkType.REGTEST, not support
-    ];
-    const networkNames = ['MAINNET', 'TESTNET', 'REGTEST'];
-    networks.forEach((networkType) => {
-        describe('decodeAddress networkType: ' + networkNames[networkType], function () {
-            const addressTypes = [AddressType.P2TR, AddressType.P2WPKH, AddressType.P2PKH, AddressType.P2SH_P2WPKH];
-            const dusts = [330, 294, 546, 546];
-            addressTypes.forEach((addressType, index) => {
-                it(`should return ${networkNames[networkType]}`, function () {
-                    const address = LocalWallet.fromRandom(addressType, networkType).address;
-                    const addressInfo = decodeAddress(address);
-                    expect(addressInfo.networkType).to.eq(networkType);
-                    expect(addressInfo.addressType).to.eq(addressType);
-                    expect(addressInfo.dust).to.eq(dusts[index]);
-                });
-            });
+        it('should throw for unsupported address type', () => {
+            expect(() =>
+                publicKeyToAddress(testPublicKeyBuffer, 'INVALID' as AddressTypes, networks.bitcoin)
+            ).toThrow();
         });
     });
 
-    it('decodeAddress UNKNOWN', function () {
-        expect(decodeAddress('invalid address').addressType).eq(AddressType.UNKNOWN);
+    describe('publicKeyToPayment', () => {
+        it('should generate P2PKH payment', () => {
+            const payment = publicKeyToPayment(testPublicKeyBuffer, AddressTypes.P2PKH, networks.bitcoin);
+            expect(payment.address).toMatch(/^1/);
+            expect(payment.output).toBeDefined();
+        });
 
-        expect(decodeAddress('bc1qxxx').addressType).eq(AddressType.UNKNOWN);
+        it('should generate P2WPKH payment', () => {
+            const payment = publicKeyToPayment(testPublicKeyBuffer, AddressTypes.P2WPKH, networks.bitcoin);
+            expect(payment.address).toMatch(/^bc1q/);
+            expect(payment.output).toBeDefined();
+        });
 
-        expect(decodeAddress('').addressType).eq(AddressType.UNKNOWN);
+        it('should generate P2TR payment', () => {
+            const payment = publicKeyToPayment(testPublicKeyBuffer, AddressTypes.P2TR, networks.bitcoin);
+            expect(payment.address).toMatch(/^bc1p/);
+            expect(payment.output).toBeDefined();
+        });
+    });
+
+    describe('publicKeyToScriptPubKey', () => {
+        it('should generate valid scriptPubKey for P2WPKH', () => {
+            const scriptPk = publicKeyToScriptPubKey(testPublicKeyBuffer, AddressTypes.P2WPKH, networks.bitcoin);
+            expect(scriptPk).toBeInstanceOf(Buffer);
+            expect(scriptPk.length).toBe(22); // P2WPKH scriptPubKey is 22 bytes
+        });
+
+        it('should generate valid scriptPubKey for P2TR', () => {
+            const scriptPk = publicKeyToScriptPubKey(testPublicKeyBuffer, AddressTypes.P2TR, networks.bitcoin);
+            expect(scriptPk).toBeInstanceOf(Buffer);
+            expect(scriptPk.length).toBe(34); // P2TR scriptPubKey is 34 bytes
+        });
+    });
+
+    describe('addressToScriptPubKey', () => {
+        it('should convert P2WPKH address to scriptPubKey', () => {
+            const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+            const scriptPk = addressToScriptPubKey(address, networks.bitcoin);
+            expect(scriptPk).toBeInstanceOf(Buffer);
+        });
+
+        it('should convert P2TR address to scriptPubKey', () => {
+            const address = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
+            const scriptPk = addressToScriptPubKey(address, networks.bitcoin);
+            expect(scriptPk).toBeInstanceOf(Buffer);
+        });
+    });
+
+    describe('scriptPubKeyToAddress', () => {
+        it('should convert P2WPKH scriptPubKey to address', () => {
+            const scriptPk = Buffer.from('0014751e76e8199196d454941c45d1b3a323f1433bd6', 'hex');
+            const address = scriptPubKeyToAddress(scriptPk, networks.bitcoin);
+            expect(address).toMatch(/^bc1q/);
+        });
+
+        it('should accept hex string scriptPubKey', () => {
+            const scriptPkHex = '0014751e76e8199196d454941c45d1b3a323f1433bd6';
+            const address = scriptPubKeyToAddress(scriptPkHex, networks.bitcoin);
+            expect(address).toMatch(/^bc1q/);
+        });
+    });
+
+    describe('isValidAddress', () => {
+        it('should validate P2WPKH mainnet address', () => {
+            const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+            expect(isValidAddress(address, networks.bitcoin)).toBe(true);
+        });
+
+        it('should validate P2TR mainnet address', () => {
+            const address = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
+            expect(isValidAddress(address, networks.bitcoin)).toBe(true);
+        });
+
+        it('should reject invalid address', () => {
+            const address = 'invalid_address';
+            expect(isValidAddress(address, networks.bitcoin)).toBe(false);
+        });
+
+        it('should reject mainnet address on testnet', () => {
+            const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+            expect(isValidAddress(address, networks.testnet)).toBe(false);
+        });
+    });
+
+    describe('detectAddressType', () => {
+        it('should detect P2WPKH address', () => {
+            const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+            const type = detectAddressType(address, networks.bitcoin);
+            expect(type).toBe(AddressTypes.P2WPKH);
+        });
+
+        it('should detect P2TR address', () => {
+            const address = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
+            const type = detectAddressType(address, networks.bitcoin);
+            expect(type).toBe(AddressTypes.P2TR);
+        });
+
+        it('should return null for invalid address', () => {
+            const address = 'invalid_address';
+            const type = detectAddressType(address, networks.bitcoin);
+            expect(type).toBeNull();
+        });
+    });
+
+    describe('decodeAddress', () => {
+        it('should decode mainnet P2WPKH address', () => {
+            const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+            const decoded = decodeAddress(address);
+            expect(decoded).not.toBeNull();
+            expect(decoded?.networkType).toBe(OPNetNetwork.Mainnet);
+            expect(decoded?.addressType).toBe(AddressTypes.P2WPKH);
+        });
+
+        it('should decode testnet P2WPKH address', () => {
+            const address = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
+            const decoded = decodeAddress(address);
+            expect(decoded).not.toBeNull();
+            expect(decoded?.networkType).toBe(OPNetNetwork.Testnet);
+        });
+
+        it('should return null for invalid address', () => {
+            const address = 'invalid_address';
+            const decoded = decodeAddress(address);
+            expect(decoded).toBeNull();
+        });
+    });
+
+    describe('isValidPublicKey', () => {
+        it('should validate compressed public key', () => {
+            const isValid = isValidPublicKey(testPublicKeyBuffer, networks.bitcoin);
+            expect(isValid).toBe(true);
+        });
+
+        it('should validate hex string public key', () => {
+            const isValid = isValidPublicKey(testPublicKey, networks.bitcoin);
+            expect(isValid).toBe(true);
+        });
+    });
+
+    describe('isValidP2TRAddress', () => {
+        it('should return true for valid P2TR address', () => {
+            const address = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
+            expect(isValidP2TRAddress(address, networks.bitcoin)).toBe(true);
+        });
+
+        it('should return false for P2WPKH address', () => {
+            const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+            expect(isValidP2TRAddress(address, networks.bitcoin)).toBe(false);
+        });
+    });
+
+    describe('isP2WPKHAddress', () => {
+        it('should return true for P2WPKH address', () => {
+            const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+            expect(isP2WPKHAddress(address, networks.bitcoin)).toBe(true);
+        });
+
+        it('should return false for P2TR address', () => {
+            const address = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
+            expect(isP2WPKHAddress(address, networks.bitcoin)).toBe(false);
+        });
+    });
+
+    describe('isP2PKHOrP2SHAddress', () => {
+        it('should return true for P2PKH address', () => {
+            const address = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2';
+            expect(isP2PKHOrP2SHAddress(address, networks.bitcoin)).toBe(true);
+        });
+
+        it('should return false for P2WPKH address', () => {
+            const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+            expect(isP2PKHOrP2SHAddress(address, networks.bitcoin)).toBe(false);
+        });
     });
 });

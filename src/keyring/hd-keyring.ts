@@ -1,241 +1,442 @@
-import { networks } from '@btc-vision/bitcoin';
-import * as bip39 from 'bip39';
-import bitcore from 'bitcore-lib';
-import hdkey from 'hdkey';
-import { ECPair, ECPairInterface } from '../bitcoin-core';
-import { DeserializeOption, IKeyringBase } from './interfaces/SimpleKeyringOptions';
+/**
+ * OPNet Wallet SDK - HD Keyring
+ * Hierarchical Deterministic keyring with quantum-resistant (ML-DSA) support.
+ * Uses @btc-vision/transaction Mnemonic class for BIP39 + BIP360 key derivation.
+ */
 
-const hdPathString = "m/44'/0'/0'/0";
-const type = 'HD Key Tree';
+import { isTaprootInput, type Network, networks, Psbt } from '@btc-vision/bitcoin';
+import {
+    AddressTypes,
+    MLDSASecurityLevel,
+    Mnemonic,
+    MnemonicStrength,
+    type QuantumBIP32Interface,
+    Wallet
+} from '@btc-vision/transaction';
+import { publicKeyToAddress } from '@/address';
+import type { AccountAddresses, AccountInfo, HdKeyringOptions, ToSignInput } from '@/types';
 
-export class HdKeyring extends IKeyringBase<DeserializeOption> {
-    static type = type;
+/**
+ * HD Keyring with quantum-resistant cryptography support.
+ * Supports BIP39 mnemonic phrases with BIP360 quantum key derivation.
+ */
+export class HdKeyring {
+    public static readonly type = 'HD Key Tree';
+    public readonly type = HdKeyring.type;
 
-    type = type;
-    mnemonic: string | null = null;
-    xpriv: string | null = null;
-    passphrase: string | null = null;
+    private mnemonic: Mnemonic | null = null;
+    private readonly wallets: Map<number, Wallet> = new Map();
+    private readonly activeIndexes: number[] = [];
+    private readonly network: Network;
+    private readonly securityLevel: MLDSASecurityLevel;
+    private readonly passphrase: string;
+    private addressType: AddressTypes;
 
-    hdPath = hdPathString;
-    root: bitcore.HDPrivateKey | null = null;
-    hdWallet?: any;
-    wallets: ECPairInterface[] = [];
-    activeIndexes: number[] = [];
-    page = 0;
-    perPage = 5;
+    constructor(options?: HdKeyringOptions) {
+        this.network = options?.network ?? networks.bitcoin;
+        this.securityLevel = options?.securityLevel ?? MLDSASecurityLevel.LEVEL2;
+        this.passphrase = options?.passphrase ?? '';
+        this.addressType = options?.addressType ?? AddressTypes.P2TR;
 
-    private _index2wallet: Record<number, [string, ECPairInterface]> = {};
+        if (options?.mnemonic !== undefined) {
+            this.initFromMnemonic(options.mnemonic);
 
-    /* PUBLIC METHODS */
-    constructor(opts?: DeserializeOption) {
-        super(opts?.network || networks.bitcoin);
-
-        if (opts) {
-            this.deserialize(opts);
+            if (options.activeIndexes !== undefined && options.activeIndexes.length > 0) {
+                this.activateAccounts([...options.activeIndexes]);
+            }
         }
     }
 
-    public serialize(): DeserializeOption {
-        return {
-            mnemonic: this.mnemonic,
-            xpriv: this.xpriv,
-            activeIndexes: this.activeIndexes,
-            hdPath: this.hdPath,
-            passphrase: this.passphrase
-        };
-    }
-
-    public deserialize(_opts: DeserializeOption = {}) {
-        if (this.root) {
-            throw new Error('Btc-Hd-Keyring: Secret recovery phrase already provided');
-        }
-        let opts = _opts as DeserializeOption;
-        this.wallets = [];
-        this.mnemonic = null;
-        this.xpriv = null;
-        this.root = null;
-        this.hdPath = opts.hdPath || hdPathString;
-        if (opts.passphrase) {
-            this.passphrase = opts.passphrase;
-        }
-
-        if (opts.mnemonic) {
-            this.initFromMnemonic(opts.mnemonic);
-        } else if (opts.xpriv) {
-            this.initFromXpriv(opts.xpriv);
-        }
-
-        if (opts.activeIndexes) {
-            this.activeAccounts(opts.activeIndexes);
-        }
-    }
-
-    public initFromXpriv(xpriv: string) {
-        if (this.root) {
-            throw new Error('Btc-Hd-Keyring: Secret recovery phrase already provided');
-        }
-
-        this.xpriv = xpriv;
-        this._index2wallet = {};
-
-        // @ts-ignore
-        this.hdWallet = hdkey.fromJSON({ xpriv });
-        this.root = this.hdWallet;
-    }
-
-    public initFromMnemonic(mnemonic: string) {
-        if (this.root) {
-            throw new Error('Btc-Hd-Keyring: Secret recovery phrase already provided');
-        }
-
-        this.mnemonic = mnemonic;
-        this._index2wallet = {};
-
-        const seed = bip39.mnemonicToSeedSync(mnemonic, this.passphrase!);
-        this.hdWallet = hdkey.fromMasterSeed(seed);
-        this.root = this.hdWallet.derive(this.hdPath);
-    }
-
-    public changeHdPath(hdPath: string) {
-        if (!this.mnemonic) {
-            throw new Error('Btc-Hd-Keyring: Not support');
-        }
-
-        this.hdPath = hdPath;
-
-        this.root = this.hdWallet.derive(this.hdPath);
-
-        const indexes = this.activeIndexes;
-        this._index2wallet = {};
-        this.activeIndexes = [];
-        this.wallets = [];
-        this.activeAccounts(indexes);
-    }
-
-    public getAccountByHdPath(hdPath: string, index: number) {
-        if (!this.mnemonic) {
-            throw new Error('Btc-Hd-Keyring: Not support');
-        }
-        const root = this.hdWallet.derive(hdPath);
-        const child = root.deriveChild(index);
-        const ecpair = ECPair.fromPrivateKey(child.privateKey, {
-            network: this.network
+    /**
+     * Generate a new mnemonic with quantum support
+     */
+    public static generate(
+        strength: MnemonicStrength = MnemonicStrength.MAXIMUM,
+        passphrase = '',
+        network: Network = networks.bitcoin,
+        securityLevel: MLDSASecurityLevel = MLDSASecurityLevel.LEVEL2
+    ): HdKeyring {
+        const mnemonic = Mnemonic.generate(strength, passphrase, network, securityLevel);
+        const keyring = new HdKeyring({
+            network,
+            securityLevel,
+            passphrase
         });
-        return ecpair.publicKey.toString('hex');
+        keyring.mnemonic = mnemonic;
+        return keyring;
     }
 
-    public addAccounts(numberOfAccounts = 1): string[] {
-        let count = numberOfAccounts;
-        let currentIdx = 0;
-        const newWallets: ECPairInterface[] = [];
+    /**
+     * Initialize from an existing mnemonic phrase
+     */
+    public initFromMnemonic(phrase: string): void {
+        if (this.mnemonic !== null) {
+            throw new Error('HdKeyring: Mnemonic already initialized');
+        }
 
-        while (count) {
-            const [, wallet] = this._addressFromIndex(currentIdx);
-            if (this.wallets.includes(wallet)) {
-                currentIdx++;
+        this.mnemonic = new Mnemonic(phrase, this.passphrase, this.network, this.securityLevel);
+    }
+
+    /**
+     * Get the mnemonic phrase
+     */
+    public getMnemonic(): string {
+        if (this.mnemonic === null) {
+            throw new Error('HdKeyring: No mnemonic initialized');
+        }
+        return this.mnemonic.phrase;
+    }
+
+    /**
+     * Check if keyring has a mnemonic
+     */
+    public hasMnemonic(): boolean {
+        return this.mnemonic !== null;
+    }
+
+    /**
+     * Derive a wallet at a specific index using Unisat-compatible derivation
+     */
+    public deriveWallet(index: number): Wallet {
+        if (this.mnemonic === null) {
+            throw new Error('HdKeyring: No mnemonic initialized');
+        }
+
+        const cached = this.wallets.get(index);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const wallet = this.mnemonic.deriveUnisat(this.addressType, index);
+        this.wallets.set(index, wallet);
+        return wallet;
+    }
+
+    /**
+     * Derive a wallet using standard (non-Unisat) derivation
+     */
+    public deriveStandardWallet(index: number): Wallet {
+        if (this.mnemonic === null) {
+            throw new Error('HdKeyring: No mnemonic initialized');
+        }
+
+        return this.mnemonic.derive(index);
+    }
+
+    /**
+     * Add new accounts to the keyring
+     */
+    public addAccounts(numberOfAccounts = 1): string[] {
+        if (this.mnemonic === null) {
+            throw new Error('HdKeyring: No mnemonic initialized');
+        }
+
+        const newPublicKeys: string[] = [];
+        let currentIndex = 0;
+
+        while (newPublicKeys.length < numberOfAccounts) {
+            if (!this.activeIndexes.includes(currentIndex)) {
+                const wallet = this.deriveWallet(currentIndex);
+                this.activeIndexes.push(currentIndex);
+                newPublicKeys.push(wallet.toPublicKeyHex());
+            }
+            currentIndex++;
+        }
+
+        return newPublicKeys;
+    }
+
+    /**
+     * Activate specific account indexes
+     */
+    public activateAccounts(indexes: number[]): string[] {
+        if (this.mnemonic === null) {
+            throw new Error('HdKeyring: No mnemonic initialized');
+        }
+
+        const publicKeys: string[] = [];
+
+        for (const index of indexes) {
+            if (!this.activeIndexes.includes(index)) {
+                const wallet = this.deriveWallet(index);
+                this.activeIndexes.push(index);
+                publicKeys.push(wallet.toPublicKeyHex());
             } else {
-                this.wallets.push(wallet);
-                newWallets.push(wallet);
-                this.activeIndexes.push(currentIdx);
-                count--;
+                const wallet = this.wallets.get(index);
+                if (wallet !== undefined) {
+                    publicKeys.push(wallet.toPublicKeyHex());
+                }
             }
         }
 
-        return newWallets.map((w) => {
-            return w.publicKey.toString('hex');
-        });
+        return publicKeys;
     }
 
-    public activeAccounts(indexes: number[]) {
-        const accounts: string[] = [];
-        for (const index of indexes) {
-            const [address, wallet] = this._addressFromIndex(index);
-            this.wallets.push(wallet);
-            this.activeIndexes.push(index);
-
-            accounts.push(address);
-        }
-
-        return accounts;
-    }
-
-    public getFirstPage() {
-        this.page = 0;
-        return this.__getPage(1);
-    }
-
-    public getNextPage() {
-        return this.__getPage(1);
-    }
-
-    public getPreviousPage() {
-        return this.__getPage(-1);
-    }
-
-    public getAddresses(start: number, end: number) {
-        const from = start;
-        const to = end;
-        const accounts: { address: string; index: number }[] = [];
-        for (let i = from; i < to; i++) {
-            const [address] = this._addressFromIndex(i);
-            accounts.push({
-                address,
-                index: i + 1
-            });
-        }
-        return accounts;
-    }
-
-    public async __getPage(increment: number) {
-        this.page += increment;
-
-        if (!this.page || this.page <= 0) {
-            this.page = 1;
-        }
-
-        const from = (this.page - 1) * this.perPage;
-        const to = from + this.perPage;
-
-        const accounts: { address: string; index: number }[] = [];
-
-        for (let i = from; i < to; i++) {
-            const [address] = this._addressFromIndex(i);
-            accounts.push({
-                address,
-                index: i + 1
-            });
-        }
-
-        return accounts;
-    }
-
+    /**
+     * Get all active account public keys
+     */
     public getAccounts(): string[] {
-        return this.wallets.map((w) => {
-            return w.publicKey.toString('hex');
+        return this.activeIndexes.map((index) => {
+            const wallet = this.wallets.get(index);
+            if (wallet === undefined) {
+                throw new Error(`HdKeyring: Wallet at index ${index} not found`);
+            }
+            return wallet.toPublicKeyHex();
         });
     }
 
-    public getIndexByAddress(address: string) {
-        for (const key in this._index2wallet) {
-            if (this._index2wallet[key][0] === address) {
-                return Number(key);
+    /**
+     * Get detailed account info for all active accounts
+     */
+    public getAccountsInfo(): AccountInfo[] {
+        return this.activeIndexes.map((index) => {
+            const wallet = this.wallets.get(index);
+            if (wallet === undefined) {
+                throw new Error(`HdKeyring: Wallet at index ${index} not found`);
+            }
+
+            const addresses: AccountAddresses = {
+                p2pkh: wallet.legacy,
+                p2wpkh: wallet.p2wpkh,
+                p2tr: wallet.p2tr,
+                p2shP2wpkh: wallet.segwitLegacy
+            };
+
+            return {
+                index,
+                publicKey: wallet.toPublicKeyHex(),
+                quantumPublicKey: wallet.quantumPublicKeyHex,
+                addresses
+            };
+        });
+    }
+
+    /**
+     * Get quantum public key for an account
+     */
+    public getQuantumPublicKey(publicKey: string): string {
+        const wallet = this.findWalletByPublicKey(publicKey);
+        return wallet.quantumPublicKeyHex;
+    }
+
+    /**
+     * Get the index for a public key
+     */
+    public getIndexByPublicKey(publicKey: string): number | null {
+        for (const [index, wallet] of this.wallets.entries()) {
+            if (wallet.toPublicKeyHex() === publicKey) {
+                return index;
             }
         }
         return null;
     }
 
-    private _addressFromIndex(i: number): [string, ECPairInterface] {
-        if (!this._index2wallet[i]) {
-            const child = this.root!.deriveChild(i);
+    /**
+     * Get addresses for a specific public key
+     */
+    public getAddressesForPublicKey(publicKey: string): AccountAddresses {
+        const wallet = this.findWalletByPublicKey(publicKey);
+        return {
+            p2pkh: wallet.legacy,
+            p2wpkh: wallet.p2wpkh,
+            p2tr: wallet.p2tr,
+            p2shP2wpkh: wallet.segwitLegacy
+        };
+    }
 
-            // @ts-ignore
-            const ecpair = ECPair.fromPrivateKey(child.privateKey || Buffer.from(child.toString(), 'hex'), {
-                network: this.network
-            });
-            const address = ecpair.publicKey.toString('hex');
-            this._index2wallet[i] = [address, ecpair];
+    /**
+     * Get an address for a public key and address type
+     */
+    public getAddress(publicKey: string, addressType: AddressTypes): string {
+        const pubkeyBuffer = Buffer.from(publicKey, 'hex');
+        return publicKeyToAddress(pubkeyBuffer, addressType, this.network);
+    }
+
+    /**
+     * Remove an account by public key
+     */
+    public removeAccount(publicKey: string): void {
+        const index = this.getIndexByPublicKey(publicKey);
+        if (index === null) {
+            throw new Error(`HdKeyring: Account with public key ${publicKey} not found`);
         }
 
-        return this._index2wallet[i];
+        const activeIdx = this.activeIndexes.indexOf(index);
+        if (activeIdx !== -1) {
+            this.activeIndexes.splice(activeIdx, 1);
+        }
+        this.wallets.delete(index);
+    }
+
+    /**
+     * Export the private key for an account
+     */
+    public exportAccount(publicKey: string): string {
+        const wallet = this.findWalletByPublicKey(publicKey);
+        return wallet.toPrivateKeyHex();
+    }
+
+    /**
+     * Sign a PSBT transaction
+     */
+    public signTransaction(psbt: Psbt, inputs: readonly ToSignInput[]): Psbt {
+        for (const input of inputs) {
+            const wallet = this.findWalletByPublicKey(input.publicKey);
+            const psbtInput = psbt.data.inputs[input.index];
+
+            if (psbtInput === undefined) {
+                throw new Error(`HdKeyring: Input at index ${input.index} not found`);
+            }
+
+            const keypair = wallet.keypair;
+            const sighashTypes = input.sighashTypes !== undefined ? [...input.sighashTypes] : undefined;
+
+            if (isTaprootInput(psbtInput) && input.disableTweakSigner !== true) {
+                // For taproot, use tweaked signer
+                const internalPubkey = wallet.publicKey.subarray(1, 33);
+                const tweakedKeypair = keypair.tweak(Buffer.from(internalPubkey));
+                psbt.signInput(input.index, tweakedKeypair, sighashTypes);
+            } else {
+                psbt.signInput(input.index, keypair, sighashTypes);
+            }
+        }
+
+        return psbt;
+    }
+
+    /**
+     * Sign arbitrary data with ECDSA or Schnorr
+     */
+    public signData(publicKey: string, data: string, type: 'ecdsa' | 'schnorr' = 'ecdsa'): string {
+        const wallet = this.findWalletByPublicKey(publicKey);
+        const dataBuffer = Buffer.from(data, 'hex');
+
+        if (type === 'ecdsa') {
+            return Buffer.from(wallet.keypair.sign(dataBuffer)).toString('hex');
+        } else {
+            return Buffer.from(wallet.keypair.signSchnorr(dataBuffer)).toString('hex');
+        }
+    }
+
+    /**
+     * Get the Wallet for a public key
+     */
+    public getWallet(publicKey: string): Wallet {
+        return this.findWalletByPublicKey(publicKey);
+    }
+
+    /**
+     * Serialize the keyring state
+     */
+    public serialize(): HdKeyringOptions {
+        return {
+            mnemonic: this.mnemonic?.phrase,
+            passphrase: this.passphrase,
+            network: this.network,
+            securityLevel: this.securityLevel,
+            activeIndexes: [...this.activeIndexes],
+            addressType: this.addressType
+        };
+    }
+
+    /**
+     * Get active indexes
+     */
+    public getActiveIndexes(): readonly number[] {
+        return [...this.activeIndexes];
+    }
+
+    /**
+     * Change the address type for new derivations
+     */
+    public setAddressType(addressType: AddressTypes): void {
+        this.addressType = addressType;
+    }
+
+    /**
+     * Get current address type
+     */
+    public getAddressType(): AddressTypes {
+        return this.addressType;
+    }
+
+    /**
+     * Get the security level
+     */
+    public getSecurityLevel(): MLDSASecurityLevel {
+        return this.securityLevel;
+    }
+
+    /**
+     * Get the network
+     */
+    public getNetwork(): Network {
+        return this.network;
+    }
+
+    /**
+     * Get paginated addresses for display
+     */
+    public getAddressesPage(page: number, perPage = 5): { address: string; index: number }[] {
+        if (this.mnemonic === null) {
+            throw new Error('HdKeyring: No mnemonic initialized');
+        }
+
+        const start = page * perPage;
+        const end = start + perPage;
+        const results: { address: string; index: number }[] = [];
+
+        for (let i = start; i < end; i++) {
+            const wallet = this.mnemonic.deriveUnisat(this.addressType, i);
+            const address = this.getAddressFromWallet(wallet);
+            results.push({ address, index: i });
+        }
+
+        return results;
+    }
+
+    /**
+     * Get the chain code for a wallet
+     */
+    public getChainCode(publicKey: string): Buffer {
+        const wallet = this.findWalletByPublicKey(publicKey);
+        return wallet.chainCode;
+    }
+
+    /**
+     * Get ML-DSA keypair for quantum operations
+     */
+    public getMLDSAKeypair(publicKey: string): QuantumBIP32Interface {
+        const wallet = this.findWalletByPublicKey(publicKey);
+        return wallet.mldsaKeypair;
+    }
+
+    private findWalletByPublicKey(publicKey: string): Wallet {
+        for (const wallet of this.wallets.values()) {
+            if (wallet.toPublicKeyHex() === publicKey) {
+                return wallet;
+            }
+        }
+        throw new Error(`HdKeyring: Wallet with public key ${publicKey} not found`);
+    }
+
+    private getAddressFromWallet(wallet: Wallet): string {
+        switch (this.addressType) {
+            case AddressTypes.P2PKH: {
+                return wallet.legacy;
+            }
+            case AddressTypes.P2WPKH: {
+                return wallet.p2wpkh;
+            }
+            case AddressTypes.P2TR: {
+                return wallet.p2tr;
+            }
+            case AddressTypes.P2SH_OR_P2SH_P2WPKH: {
+                return wallet.segwitLegacy;
+            }
+            default: {
+                return wallet.p2tr;
+            }
+        }
     }
 }

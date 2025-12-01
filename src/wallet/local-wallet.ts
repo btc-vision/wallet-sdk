@@ -1,201 +1,339 @@
-import { publicKeyToAddress, publicKeyToScriptPk, scriptPkToAddress } from '../address';
-import { bitcoin, ECPair } from '../bitcoin-core';
-import { HdKeyring, SimpleKeyring } from '../keyring';
-import { signMessageOfBIP322Simple } from '../message';
-import { NetworkType, toPsbtNetwork } from '../network';
-import { AddressType, AddressUserToSignInput, PublicKeyUserToSignInput, SignPsbtOptions, ToSignInput } from '../types';
-import { toXOnly } from '../utils';
-import { AbstractWallet } from './abstract-wallet';
+/**
+ * OPNet Wallet SDK - Local Wallet
+ * Full-featured local wallet implementation with quantum support.
+ */
 
+import { type Network, networks, payments, Psbt, Transaction } from '@btc-vision/bitcoin';
+import { AddressTypes } from '@btc-vision/transaction';
+import { publicKeyToAddress, scriptPubKeyToAddress } from '@/address';
+import { HdKeyring } from '@/keyring';
+import { SimpleKeyring } from '@/keyring';
+import { signBip322Message, signMLDSA, signSchnorr } from '@/message';
+import type { AbstractWallet, MessageSigningMethod, SignPsbtOptions, ToSignInput } from '@/types';
+
+/**
+ * Local wallet implementation with full signing capabilities.
+ */
 export class LocalWallet implements AbstractWallet {
-    keyring: SimpleKeyring;
-    address: string;
-    pubkey: string;
-    network: bitcoin.Network;
-    addressType: AddressType;
-    networkType: NetworkType;
-    scriptPk: string | undefined;
+    private readonly keyring: SimpleKeyring | HdKeyring;
+    private readonly network: Network;
+    private readonly addressType: AddressTypes;
+    private readonly publicKey: string;
+    private readonly address: string;
 
-    constructor(
-        wif: string,
-        addressType: AddressType = AddressType.P2WPKH,
-        networkType: NetworkType = NetworkType.MAINNET
+    private constructor(
+        keyring: SimpleKeyring | HdKeyring,
+        network: Network,
+        addressType: AddressTypes,
+        publicKey: string
     ) {
-        const network = toPsbtNetwork(networkType);
-        const keyPair = ECPair.fromWIF(wif, network);
-        this.keyring = new SimpleKeyring({ privateKeys: [keyPair.privateKey!.toString('hex')], network: network });
-        this.keyring.addAccounts(1);
-        this.pubkey = keyPair.publicKey.toString('hex');
-        this.address = publicKeyToAddress(this.pubkey, addressType, networkType);
+        this.keyring = keyring;
         this.network = network;
-        this.networkType = networkType;
         this.addressType = addressType;
-
-        this.scriptPk = publicKeyToScriptPk(this.pubkey, addressType, networkType);
+        this.publicKey = publicKey;
+        this.address = publicKeyToAddress(Buffer.from(publicKey, 'hex'), addressType, network);
     }
 
-    static fromMnemonic(
-        addressType: AddressType,
-        networkType: NetworkType,
+    /**
+     * Create wallet from WIF
+     */
+    public static fromWIF(
+        wif: string,
+        addressType: AddressTypes = AddressTypes.P2TR,
+        network: Network,
+        quantumPrivateKey?: string
+    ): LocalWallet {
+        const keyring = SimpleKeyring.fromWIF(wif, quantumPrivateKey, network);
+        const publicKey = keyring.getPublicKey();
+        return new LocalWallet(keyring, network, addressType, publicKey);
+    }
+
+    /**
+     * Create wallet from private key hex
+     */
+    public static fromPrivateKey(
+        privateKeyHex: string,
+        addressType: AddressTypes = AddressTypes.P2TR,
+        network: Network,
+        quantumPrivateKey?: string
+    ): LocalWallet {
+        const keyring = SimpleKeyring.fromPrivateKey(privateKeyHex, quantumPrivateKey, network);
+        const publicKey = keyring.getPublicKey();
+        return new LocalWallet(keyring, network, addressType, publicKey);
+    }
+
+    /**
+     * Create wallet from mnemonic
+     */
+    public static fromMnemonic(
         mnemonic: string,
-        passPhrase?: string,
-        hdPath?: string
-    ) {
+        addressType: AddressTypes = AddressTypes.P2TR,
+        network: Network,
+        passphrase?: string,
+        accountIndex = 0
+    ): LocalWallet {
         const keyring = new HdKeyring({
             mnemonic,
-            hdPath,
-            passphrase: passPhrase,
-            activeIndexes: [0]
+            passphrase,
+            network,
+            addressType,
+            activeIndexes: [accountIndex]
         });
-
-        const _wallet = keyring.wallets[0];
-        _wallet.network = toPsbtNetwork(networkType);
-
-        return new LocalWallet(keyring.wallets[0].toWIF(), addressType, networkType);
+        const accounts = keyring.getAccounts();
+        const publicKey = accounts[0];
+        if (publicKey === undefined) {
+            throw new Error('Failed to derive wallet from mnemonic');
+        }
+        return new LocalWallet(keyring, network, addressType, publicKey);
     }
 
-    static fromRandom(addressType: AddressType = AddressType.P2WPKH, networkType: NetworkType = NetworkType.MAINNET) {
-        const network = toPsbtNetwork(networkType);
-        const ecpair = ECPair.makeRandom({ network });
-        return new LocalWallet(ecpair.toWIF(), addressType, networkType);
+    /**
+     * Create a random wallet
+     */
+    public static random(
+        addressType: AddressTypes = AddressTypes.P2TR,
+        network: Network = networks.bitcoin
+    ): LocalWallet {
+        const keyring = SimpleKeyring.generate(network);
+        const publicKey = keyring.getPublicKey();
+        return new LocalWallet(keyring, network, addressType, publicKey);
     }
 
-    getNetworkType() {
-        return this.networkType;
+    /**
+     * Get the wallet address
+     */
+    public getAddress(): string {
+        return this.address;
     }
 
-    async signPsbt(psbt: bitcoin.Psbt, opts?: SignPsbtOptions) {
-        const _opts = opts || {
-            autoFinalized: true,
-            toSignInputs: []
-        };
-        let _inputs: ToSignInput[] = await this.formatOptionsToSignInputs(psbt, opts);
+    /**
+     * Get the public key
+     */
+    public getPublicKey(): string {
+        return this.publicKey;
+    }
 
-        if (_inputs.length == 0) {
-            throw new Error('no input to sign');
+    /**
+     * Get the quantum public key
+     */
+    public getQuantumPublicKey(): string {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.getQuantumPublicKey();
+        }
+        return this.keyring.getQuantumPublicKey(this.publicKey);
+    }
+
+    /**
+     * Get the network
+     */
+    public getNetwork(): Network {
+        return this.network;
+    }
+
+    /**
+     * Get the address type
+     */
+    public getAddressType(): AddressTypes {
+        return this.addressType;
+    }
+
+    /**
+     * Sign a PSBT
+     */
+    public signPsbt(psbt: Psbt, opts?: SignPsbtOptions): Psbt {
+        const options = opts ?? { autoFinalized: true, toSignInputs: [] };
+        const inputs = this.formatInputsToSign(psbt, options);
+
+        if (inputs.length === 0) {
+            throw new Error('LocalWallet: No inputs to sign');
         }
 
-        psbt.data.inputs.forEach((v) => {
-            const isNotSigned = !(v.finalScriptSig || v.finalScriptWitness);
-            const isP2TR = this.addressType === AddressType.P2TR || this.addressType === AddressType.M44_P2TR;
-            const lostInternalPubkey = !v.tapInternalKey;
-            // Special measures taken for compatibility with certain applications.
+        // Add tapInternalKey for P2TR inputs if missing
+        for (const input of inputs) {
+            const psbtInput = psbt.data.inputs[input.index];
+            if (psbtInput === undefined) {
+                continue;
+            }
+
+            const isNotSigned = !(psbtInput.finalScriptSig ?? psbtInput.finalScriptWitness);
+            const isP2TR = this.addressType === AddressTypes.P2TR;
+            const lostInternalPubkey = psbtInput.tapInternalKey === undefined;
+
             if (isNotSigned && isP2TR && lostInternalPubkey) {
-                const tapInternalKey = toXOnly(Buffer.from(this.pubkey, 'hex'));
-                const { output } = bitcoin.payments.p2tr({
+                const pubkeyBuffer = Buffer.from(this.publicKey, 'hex');
+                const tapInternalKey = pubkeyBuffer.length === 33 ? pubkeyBuffer.subarray(1, 33) : pubkeyBuffer;
+                const { output } = payments.p2tr({
                     internalPubkey: tapInternalKey,
-                    network: toPsbtNetwork(this.networkType)
+                    network: this.network
                 });
-                if (v.witnessUtxo?.script.toString('hex') == output?.toString('hex')) {
-                    v.tapInternalKey = tapInternalKey;
+                if (psbtInput.witnessUtxo?.script.toString('hex') === output?.toString('hex')) {
+                    psbtInput.tapInternalKey = tapInternalKey;
                 }
             }
-        });
-
-        psbt = this.keyring.signTransaction(psbt, _inputs);
-        if (_opts.autoFinalized) {
-            _inputs.forEach((v) => {
-                // psbt.validateSignaturesOfInput(v.index, validator);
-                psbt.finalizeInput(v.index);
-            });
         }
+
+        // Sign transaction
+        if (this.keyring instanceof SimpleKeyring) {
+            this.keyring.signTransaction(psbt, inputs);
+        } else {
+            this.keyring.signTransaction(psbt, inputs);
+        }
+
+        // Finalize if requested
+        if (options.autoFinalized === true) {
+            for (const input of inputs) {
+                psbt.finalizeInput(input.index);
+            }
+        }
+
         return psbt;
     }
 
-    getPublicKey(): string {
-        const pubkeys = this.keyring.getAccounts();
-        return pubkeys[0];
-    }
-
-    async signMessage(message: string | Buffer, type: 'bip322-simple' | 'ecdsa'): Promise<string> {
-        if (type === 'bip322-simple') {
-            return await signMessageOfBIP322Simple({
-                message,
-                address: this.address,
-                networkType: this.networkType,
-                wallet: this
-            });
-        } else {
-            const pubkey = this.getPublicKey();
-            return this.keyring.signMessage(pubkey, message);
+    /**
+     * Sign a message
+     */
+    public async signMessage(message: string | Buffer, method: MessageSigningMethod): Promise<string> {
+        switch (method) {
+            case 'bip322-simple': {
+                return await signBip322Message(message, this.address, this.network, (psbt) => {
+                    return Promise.resolve(this.signPsbt(psbt, { autoFinalized: false }));
+                });
+            }
+            case 'ecdsa':
+            case 'schnorr': {
+                const keypair = this.getKeypair();
+                const result = signSchnorr(keypair, message);
+                return Buffer.from(result.signature).toString('hex');
+            }
+            case 'mldsa': {
+                const quantumKeypair = this.getQuantumKeypair();
+                const result = signMLDSA(quantumKeypair, message);
+                return Buffer.from(result.signature).toString('hex');
+            }
         }
     }
 
-    async signData(data: string, type: 'ecdsa' | 'schnorr' = 'ecdsa') {
-        const pubkey = this.getPublicKey();
-        return this.keyring.signData(pubkey, data, type);
+    /**
+     * Sign raw data
+     */
+    public signData(data: string, type: 'ecdsa' | 'schnorr' = 'ecdsa'): string {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.signData(data, type);
+        }
+        return this.keyring.signData(this.publicKey, data, type);
     }
 
-    private async formatOptionsToSignInputs(_psbt: string | bitcoin.Psbt, options?: SignPsbtOptions) {
-        const accountAddress = this.address;
-        const accountPubkey = this.getPublicKey();
+    /**
+     * Export the private key
+     */
+    public exportPrivateKey(): string {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.exportPrivateKey();
+        }
+        return this.keyring.exportAccount(this.publicKey);
+    }
 
-        let toSignInputs: ToSignInput[] = [];
-        if (options && options.toSignInputs) {
-            // We expect userToSignInputs objects to be similar to ToSignInput interface,
-            // but we allow address to be specified in addition to publicKey for convenience.
-            toSignInputs = options.toSignInputs.map((input) => {
-                const index = Number(input.index);
-                if (isNaN(index)) throw new Error('invalid index in toSignInput');
+    /**
+     * Export the quantum private key
+     */
+    public exportQuantumPrivateKey(): string {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.exportQuantumPrivateKey();
+        }
+        throw new Error('LocalWallet: Cannot export quantum key from HD keyring directly');
+    }
 
-                if (!(input as AddressUserToSignInput).address && !(input as PublicKeyUserToSignInput).publicKey) {
-                    throw new Error('no address or public key in toSignInput');
-                }
+    /**
+     * Export WIF
+     */
+    public exportWIF(): string {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.exportWIF();
+        }
+        throw new Error('LocalWallet: Cannot export WIF from HD keyring directly');
+    }
 
-                if (
-                    (input as AddressUserToSignInput).address &&
-                    (input as AddressUserToSignInput).address != accountAddress
-                ) {
-                    throw new Error('invalid address in toSignInput');
-                }
+    private getKeypair(): ReturnType<SimpleKeyring['getKeypair']> {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.getKeypair();
+        }
+        return this.keyring.getWallet(this.publicKey).keypair;
+    }
 
-                if (
-                    (input as PublicKeyUserToSignInput).publicKey &&
-                    (input as PublicKeyUserToSignInput).publicKey != accountPubkey
-                ) {
-                    throw new Error('invalid public key in toSignInput');
-                }
+    private getQuantumKeypair(): ReturnType<SimpleKeyring['getQuantumKeypair']> {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.getQuantumKeypair();
+        }
+        return this.keyring.getMLDSAKeypair(this.publicKey);
+    }
 
-                const sighashTypes = input.sighashTypes?.map(Number);
-                if (sighashTypes?.some(isNaN)) throw new Error('invalid sighash type in toSignInput');
+    private formatInputsToSign(psbt: Psbt, options: SignPsbtOptions): ToSignInput[] {
+        const toSignInputs: ToSignInput[] = [];
 
-                return {
-                    index,
-                    publicKey: accountPubkey,
-                    sighashTypes,
-                    disableTweakSigner: input.disableTweakSigner
-                };
-            });
-        } else {
-            const networkType = this.getNetworkType();
-            const psbtNetwork = toPsbtNetwork(networkType);
+        if (options.toSignInputs !== undefined && options.toSignInputs.length > 0) {
+            for (const input of options.toSignInputs) {
+                const index = input.index;
 
-            const psbt =
-                typeof _psbt === 'string'
-                    ? bitcoin.Psbt.fromHex(_psbt as string, { network: psbtNetwork })
-                    : (_psbt as bitcoin.Psbt);
-            psbt.data.inputs.forEach((v, index) => {
-                let script: any = null;
-                if (v.witnessUtxo) {
-                    script = v.witnessUtxo.script;
-                } else if (v.nonWitnessUtxo) {
-                    const tx = bitcoin.Transaction.fromBuffer(v.nonWitnessUtxo);
-                    const output = tx.outs[psbt.txInputs[index].index];
-                    script = output.script;
-                }
-                const isSigned = v.finalScriptSig || v.finalScriptWitness;
-                if (script && !isSigned) {
-                    const address = scriptPkToAddress(script, this.networkType);
-                    if (accountAddress === address) {
-                        toSignInputs.push({
-                            index,
-                            publicKey: accountPubkey,
-                            sighashTypes: v.sighashType ? [v.sighashType] : undefined
-                        });
+                if ('address' in input) {
+                    if (input.address !== this.address) {
+                        throw new Error(`LocalWallet: Address mismatch at input ${index}`);
+                    }
+                } else if ('publicKey' in input) {
+                    if (input.publicKey !== this.publicKey) {
+                        throw new Error(`LocalWallet: Public key mismatch at input ${index}`);
                     }
                 }
-            });
+
+                const toSignInput: ToSignInput = {
+                    index,
+                    publicKey: this.publicKey
+                };
+                if (input.sighashTypes !== undefined) {
+                    (toSignInput as { sighashTypes?: readonly number[] }).sighashTypes = input.sighashTypes;
+                }
+                if (input.disableTweakSigner !== undefined) {
+                    (toSignInput as { disableTweakSigner?: boolean }).disableTweakSigner = input.disableTweakSigner;
+                }
+                toSignInputs.push(toSignInput);
+            }
+        } else {
+            // Auto-detect inputs to sign
+            for (let i = 0; i < psbt.data.inputs.length; i++) {
+                const input = psbt.data.inputs[i];
+                if (input === undefined) {
+                    continue;
+                }
+
+                let script: Buffer | undefined;
+                if (input.witnessUtxo !== undefined) {
+                    script = input.witnessUtxo.script;
+                } else if (input.nonWitnessUtxo !== undefined) {
+                    const tx = psbt.txInputs[i];
+                    if (tx !== undefined) {
+                        const nonWitnessTx = Transaction.fromBuffer(input.nonWitnessUtxo);
+                        const output = nonWitnessTx.outs[tx.index];
+                        script = output?.script;
+                    }
+                }
+
+                const isSigned = input.finalScriptSig ?? input.finalScriptWitness;
+
+                if (script !== undefined && isSigned === undefined) {
+                    const address = scriptPubKeyToAddress(script, this.network);
+                    if (address === this.address) {
+                        const toSignInput: ToSignInput = {
+                            index: i,
+                            publicKey: this.publicKey
+                        };
+                        if (input.sighashType !== undefined) {
+                            (toSignInput as { sighashTypes?: readonly number[] }).sighashTypes = [input.sighashType];
+                        }
+                        toSignInputs.push(toSignInput);
+                    }
+                }
+            }
         }
+
         return toSignInputs;
     }
 }
