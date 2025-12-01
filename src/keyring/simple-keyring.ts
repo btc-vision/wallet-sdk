@@ -210,10 +210,21 @@ export class SimpleKeyring {
 
     /**
      * Get the quantum public key
+     * @throws Error if no quantum keypair is initialized
      */
     public getQuantumPublicKey(): string {
         if (this.quantumKeypair === null) {
             throw new Error('SimpleKeyring: No quantum keypair initialized');
+        }
+        return Buffer.from(this.quantumKeypair.publicKey).toString('hex');
+    }
+
+    /**
+     * Get the quantum public key if available, or undefined if not initialized
+     */
+    public getQuantumPublicKeyOrUndefined(): string | undefined {
+        if (this.quantumKeypair === null) {
+            return undefined;
         }
         return Buffer.from(this.quantumKeypair.publicKey).toString('hex');
     }
@@ -293,7 +304,6 @@ export class SimpleKeyring {
         if (this.quantumKeypair?.privateKey === undefined) {
             throw new Error('SimpleKeyring: No quantum private key available');
         }
-
         // Combine private key and chain code for full export
         const privateKey = Buffer.from(this.quantumKeypair.privateKey);
         return Buffer.concat([privateKey, this.chainCode]).toString('hex');
