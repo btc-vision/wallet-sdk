@@ -207,6 +207,14 @@ export class SimpleKeyring {
     }
 
     /**
+     * Clear the quantum keypair (used for reverting failed imports)
+     */
+    public clearQuantumKey(): void {
+        this.quantumKeypair = null;
+        this.chainCode = Buffer.alloc(32);
+    }
+
+    /**
      * Get all accounts (returns array with single public key)
      */
     public getAccounts(): string[] {
