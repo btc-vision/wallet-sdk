@@ -1,24 +1,24 @@
-# UniSat Wallet SDK
+# OP_WALLET SDK
 
 ## Getting started
 
-This repo uses a yarn workspace. To get started, run:
+This repo uses a npm workspace. To get started, run:
 
 ```shell
 # install
-yarn install
+npm install
 
 # build
-yarn build
+npm run build
 
 # test
-yarn test
+npm test
 ```
 
 ## Usage
 
 ```shell
 
-yarn add @unisat/wallet-sdk
+yarn add @btc-vision/wallet-sdk
 
 ```
