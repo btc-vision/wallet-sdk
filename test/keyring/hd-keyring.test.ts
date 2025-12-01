@@ -1,4 +1,4 @@
-import { expect } from 'chai';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { HdKeyring } from '../../src/keyring';
 
 const sampleMnemonic = 'finish oppose decorate face calm tragic certain desk hour urge dinosaur mango';
@@ -30,7 +30,7 @@ describe('bitcoin-hd-keyring', () => {
             try {
                 keyring.initFromMnemonic(sampleMnemonic);
             } catch (e) {
-                error = e.message;
+                error = (e as Error).message;
             }
             expect(error).eq(alreadyProvidedError);
         });
@@ -45,7 +45,7 @@ describe('bitcoin-hd-keyring', () => {
             try {
                 keyring.initFromMnemonic(sampleMnemonic);
             } catch (e) {
-                error = e.message;
+                error = (e as Error).message;
             }
             expect(error).eq(alreadyProvidedError);
         });

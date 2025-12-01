@@ -10,15 +10,11 @@ export function signMessageOfECDSA(privateKey: ECPairInterface, text: string) {
 
 export function verifyMessageOfECDSA(publicKey: string, text: string, sig: string) {
     const message = new bitcore.Message(text);
-    // @ts-ignore
-    const signature = bitcore.crypto.Signature.fromCompact(Buffer.from(sig, 'base64'));
+
+    const signature = bitcore.crypto.Signature.fromDER(Buffer.from(sig, 'base64'));
     const hash = message.magicHash();
 
-    // recover the public key
-    // @ts-ignore
-    const ecdsa = new bitcore.crypto.ECDSA();
-    ecdsa.hashbuf = hash;
-    ecdsa.sig = signature;
+    // FIX THIS SHIT.
 
     const pubkeyInSig = ecdsa.toPublicKey();
 

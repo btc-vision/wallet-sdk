@@ -1,5 +1,5 @@
-import { sha256 } from '@btc-vision/bitcoin/src/crypto';
-import { expect } from 'chai';
+import { sha256 } from '@btc-vision/bitcoin';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { bitcoin } from '../../src/bitcoin-core';
 import { SimpleKeyring, verifySignData } from '../../src/keyring';
 import { toXOnly } from '../../src/utils';
@@ -27,6 +27,10 @@ describe('bitcoin-simple-keyring', () => {
     describe('#serialize empty wallets.', function () {
         it('serializes an empty array', async function () {
             const output = keyring.serialize().privateKeys;
+            if (!output) {
+                throw new Error('No privateKeys in serialization output');
+            }
+
             expect(output.length == 0).to.be.true;
         });
     });
@@ -35,6 +39,11 @@ describe('bitcoin-simple-keyring', () => {
         it('serializes what it deserializes', async function () {
             keyring.deserialize({ privateKeys: [testAccount.key] });
             const serialized = keyring.serialize().privateKeys;
+
+            if (!serialized) {
+                throw new Error('No privateKeys in serialization output');
+            }
+
             expect(serialized).length(1);
             expect(serialized[0]).eq(testAccount.key);
         });
@@ -148,11 +157,11 @@ describe('bitcoin-simple-keyring', () => {
             const pubkey = accounts[0];
             const data = 'HELLO WORLD';
 
-            let err = null;
+            let err: Error | null = null;
             try {
                 newKeyring.signData(pubkey, data);
             } catch (e) {
-                err = e;
+                err = e as Error;
             }
 
             expect(err?.message).eq('Expected Scalar');

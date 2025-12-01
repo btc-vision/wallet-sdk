@@ -22,7 +22,7 @@ interface TxInput {
 
 interface TxOutput {
     address?: string;
-    script?: Buffer;
+    script?: Buffer | Uint8Array;
     value: number;
 }
 
@@ -252,7 +252,7 @@ export class Transaction {
                 });
             } else if (v.script) {
                 psbt.addOutput({
-                    script: v.script,
+                    script: Buffer.from(v.script),
                     value: v.value
                 });
             }

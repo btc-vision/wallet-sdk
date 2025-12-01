@@ -30,7 +30,6 @@ export * from './keyring';
 export * from './constants';
 
 export * as transaction from './transaction';
-export * as txHelpers from './tx-helpers';
 export * from './types';
 export * as utils from './utils';
 

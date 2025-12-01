@@ -1,5 +1,5 @@
 import { Tapleaf, Taptree } from '@btc-vision/bitcoin/src/types';
-import { expect } from 'chai';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { AddressType } from '../../src';
 import { ECPair, bitcoin } from '../../src/bitcoin-core';
 import { NetworkType } from '../../src/network';

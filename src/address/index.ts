@@ -73,13 +73,11 @@ export function isValidAddress(address: string, networkType: NetworkType = Netwo
     try {
         bitcoin.address.toOutputScript(address, toPsbtNetwork(networkType));
     } catch (e) {
+        console.log(e);
         error = e;
     }
-    if (error) {
-        return false;
-    } else {
-        return true;
-    }
+
+    return !error;
 }
 
 export function decodeAddress(address: string) {

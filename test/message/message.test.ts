@@ -1,4 +1,4 @@
-import { expect } from 'chai';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { AddressType } from '../../src';
 import { verifyMessageOfBIP322Simple, verifyMessageOfECDSA } from '../../src/message';
 import { NetworkType } from '../../src/network';

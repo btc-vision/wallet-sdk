@@ -33,22 +33,6 @@ export interface UnspentOutput {
     scriptPk: string;
     pubkey: string;
     addressType: AddressType;
-    inscriptions: {
-        inscriptionId: string;
-        inscriptionNumber?: number;
-        offset: number;
-    }[];
-    atomicals: {
-        atomicalId: string;
-        atomicalNumber: number;
-        type: 'FT' | 'NFT';
-        ticker?: string;
-        atomicalValue?: number;
-    }[];
-    runes?: {
-        runeid: string;
-        amount: string;
-    }[];
     rawtx?: string;
 }
 
