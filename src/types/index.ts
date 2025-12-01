@@ -146,6 +146,7 @@ export interface HdKeyringOptions {
     readonly securityLevel?: MLDSASecurityLevel | undefined;
     readonly activeIndexes?: readonly number[] | undefined;
     readonly addressType?: AddressTypes | undefined;
+    readonly hdPath?: string | undefined;
 }
 
 /**

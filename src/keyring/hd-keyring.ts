@@ -31,12 +31,14 @@ export class HdKeyring {
     private readonly securityLevel: MLDSASecurityLevel;
     private readonly passphrase: string;
     private addressType: AddressTypes;
+    private readonly _hdPath: string;
 
     constructor(options?: HdKeyringOptions) {
         this.network = options?.network ?? networks.bitcoin;
         this.securityLevel = options?.securityLevel ?? MLDSASecurityLevel.LEVEL2;
         this.passphrase = options?.passphrase ?? '';
         this.addressType = options?.addressType ?? AddressTypes.P2TR;
+        this._hdPath = options?.hdPath ?? "m/84'/0'/0'";
 
         if (options?.mnemonic !== undefined) {
             this.initFromMnemonic(options.mnemonic);
@@ -45,6 +47,13 @@ export class HdKeyring {
                 this.activateAccounts([...options.activeIndexes]);
             }
         }
+    }
+
+    /**
+     * Get the HD derivation path
+     */
+    public get hdPath(): string {
+        return this._hdPath;
     }
 
     /**
@@ -95,7 +104,8 @@ export class HdKeyring {
     }
 
     /**
-     * Derive a wallet at a specific index using Unisat-compatible derivation
+     * Derive a wallet at a specific index.
+     * Uses custom hdPath if set, otherwise uses Unisat-compatible derivation.
      */
     public deriveWallet(index: number): Wallet {
         if (this.mnemonic === null) {
@@ -107,7 +117,20 @@ export class HdKeyring {
             return cached;
         }
 
-        const wallet = this.mnemonic.deriveUnisat(this.addressType, index);
+        let wallet: Wallet;
+
+        // Check if using a custom HD path
+        if (this.isCustomHdPath()) {
+            // Build the full classical path: hdPath + /index
+            const classicalPath = `${this._hdPath}/${index}`;
+            // Quantum path always uses BIP360 with coin type 0 for mainnet
+            const coinType = this.network === networks.bitcoin ? 0 : 1;
+            const quantumPath = `m/360'/${coinType}'/0'/0/${index}`;
+            wallet = this.mnemonic.deriveCustomPath(classicalPath, quantumPath);
+        } else {
+            wallet = this.mnemonic.deriveUnisat(this.addressType, index);
+        }
+
         this.wallets.set(index, wallet);
         return wallet;
     }
@@ -335,7 +358,8 @@ export class HdKeyring {
             network: this.network,
             securityLevel: this.securityLevel,
             activeIndexes: [...this.activeIndexes],
-            addressType: this.addressType
+            addressType: this.addressType,
+            hdPath: this._hdPath
         };
     }
 
@@ -387,7 +411,17 @@ export class HdKeyring {
         const results: { address: string; index: number }[] = [];
 
         for (let i = start; i < end; i++) {
-            const wallet = this.mnemonic.deriveUnisat(this.addressType, i);
+            let wallet: Wallet;
+
+            if (this.isCustomHdPath()) {
+                const classicalPath = `${this._hdPath}/${i}`;
+                const coinType = this.network === networks.bitcoin ? 0 : 1;
+                const quantumPath = `m/360'/${coinType}'/0'/0/${i}`;
+                wallet = this.mnemonic.deriveCustomPath(classicalPath, quantumPath);
+            } else {
+                wallet = this.mnemonic.deriveUnisat(this.addressType, i);
+            }
+
             const address = this.getAddressFromWallet(wallet);
             results.push({ address, index: i });
         }
@@ -409,6 +443,31 @@ export class HdKeyring {
     public getMLDSAKeypair(publicKey: string): QuantumBIP32Interface {
         const wallet = this.findWalletByPublicKey(publicKey);
         return wallet.mldsaKeypair;
+    }
+
+    /**
+     * Check if the current hdPath is a custom (non-standard) path
+     */
+    private isCustomHdPath(): boolean {
+        // Standard BIP paths for common address types
+        const standardPaths: Partial<Record<AddressTypes, string>> = {
+            [AddressTypes.P2PKH]: "m/44'/0'/0'/0",
+            [AddressTypes.P2WPKH]: "m/84'/0'/0'/0",
+            [AddressTypes.P2TR]: "m/86'/0'/0'/0",
+            [AddressTypes.P2SH_OR_P2SH_P2WPKH]: "m/49'/0'/0'/0"
+        };
+
+        const standardPath = standardPaths[this.addressType];
+
+        // If no standard path exists for this address type, any non-empty path is "custom"
+        if (standardPath === undefined) {
+            return this._hdPath !== '';
+        }
+
+        // Also check without trailing /0 for base paths like m/84'/0'/0'
+        const standardPathBase = standardPath.slice(0, -2); // Remove /0
+
+        return this._hdPath !== standardPath && this._hdPath !== standardPathBase && this._hdPath !== '';
     }
 
     private findWalletByPublicKey(publicKey: string): Wallet {
