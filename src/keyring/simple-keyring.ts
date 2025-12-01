@@ -14,9 +14,13 @@ import {
     QuantumBIP32Factory,
     type QuantumBIP32Interface
 } from '@btc-vision/transaction';
+import { getMLDSAConfig } from '@btc-vision/bip32';
 import type { ECPairInterface } from 'ecpair';
 import { publicKeyToAddress } from '@/address';
 import type { AccountAddresses, SimpleKeyringOptions, ToSignInput } from '@/types';
+
+// Chain code is always 32 bytes
+const CHAINCODE_BYTES = 32;
 
 /**
  * Simple Keyring for single key pair management with quantum support.
@@ -133,16 +137,34 @@ export class SimpleKeyring {
     }
 
     /**
-     * Import an existing quantum private key
+     * Import an existing quantum private key.
+     * Supports both:
+     * - Key only (e.g., 2560 bytes for ML-DSA-44)
+     * - Key + chaincode (e.g., 2560 + 32 = 2592 bytes for ML-DSA-44)
      */
     public importQuantumKey(quantumPrivateKeyHex: string): void {
         const privateKeyBytes = Buffer.from(quantumPrivateKeyHex, 'hex');
 
-        // Extract chain code from the end of the key if present
-        // Format: privateKey + chainCode (32 bytes)
-        if (privateKeyBytes.length > 32) {
-            this.chainCode = privateKeyBytes.subarray(-32);
-            const keyWithoutChainCode = privateKeyBytes.subarray(0, -32);
+        // Get expected MLDSA private key size for the security level
+        const mldsaConfig = getMLDSAConfig(this.securityLevel, this.network);
+        const expectedKeySize = mldsaConfig.privateKeySize;
+        const expectedKeyWithChaincodeSize = expectedKeySize + CHAINCODE_BYTES;
+
+        // Determine if chaincode is present based on the key length
+        const hasChaincode = privateKeyBytes.length === expectedKeyWithChaincodeSize;
+        const isKeyOnly = privateKeyBytes.length === expectedKeySize;
+
+        if (!hasChaincode && !isKeyOnly) {
+            throw new Error(
+                `Invalid quantum key length: ${privateKeyBytes.length} bytes. ` +
+                    `Expected ${expectedKeySize} bytes (key only) or ${expectedKeyWithChaincodeSize} bytes (key + chaincode).`
+            );
+        }
+
+        if (hasChaincode) {
+            // Extract chaincode from the end of the key
+            this.chainCode = privateKeyBytes.subarray(-CHAINCODE_BYTES);
+            const keyWithoutChainCode = privateKeyBytes.subarray(0, -CHAINCODE_BYTES);
             this.quantumKeypair = QuantumBIP32Factory.fromPrivateKey(
                 keyWithoutChainCode,
                 this.chainCode,
@@ -150,8 +172,8 @@ export class SimpleKeyring {
                 this.securityLevel
             );
         } else {
-            // Generate a deterministic chain code from the key
-            this.chainCode = Buffer.from(crypto.getRandomValues(new Uint8Array(32)));
+            // Key only - generate a random chaincode
+            this.chainCode = Buffer.from(crypto.getRandomValues(new Uint8Array(CHAINCODE_BYTES)));
             this.quantumKeypair = QuantumBIP32Factory.fromPrivateKey(
                 privateKeyBytes,
                 this.chainCode,
@@ -442,9 +464,17 @@ export class SimpleKeyring {
      * Serialize the keyring state (excludes private keys for safety)
      */
     public serialize(): SimpleKeyringOptions {
+        let quantumPrivateKey: string | undefined;
+        try {
+            quantumPrivateKey = this.exportQuantumPrivateKey();
+        } catch {
+            // No quantum key available - that's fine for wallets that haven't migrated
+            quantumPrivateKey = undefined;
+        }
+
         return {
             privateKey: this.exportPrivateKey(),
-            quantumPrivateKey: this.exportQuantumPrivateKey(),
+            quantumPrivateKey,
             network: this.network,
             securityLevel: this.securityLevel
         };

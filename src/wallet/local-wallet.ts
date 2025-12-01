@@ -6,7 +6,8 @@
 import { type Network, networks, payments, Psbt, Transaction } from '@btc-vision/bitcoin';
 import { AddressTypes } from '@btc-vision/transaction';
 import { publicKeyToAddress, scriptPubKeyToAddress } from '@/address';
-import { HdKeyring, SimpleKeyring } from '@/keyring';
+import { HdKeyring } from '@/keyring';
+import { SimpleKeyring } from '@/keyring';
 import { signBip322Message, signMLDSA, signSchnorr } from '@/message';
 import type { AbstractWallet, MessageSigningMethod, SignPsbtOptions, ToSignInput } from '@/types';
 
