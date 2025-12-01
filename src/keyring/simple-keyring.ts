@@ -62,7 +62,9 @@ export class SimpleKeyring {
     }
 
     /**
-     * Import from WIF (Wallet Import Format) with mandatory quantum key
+     * Import from WIF (Wallet Import Format) with optional quantum key.
+     * If no quantum key is provided, the keyring will NOT have a quantum keypair.
+     * The quantum key must be explicitly set later via importQuantumKey() or generateFreshQuantumKey().
      */
     public static fromWIF(
         wif: string,
@@ -75,15 +77,16 @@ export class SimpleKeyring {
 
         if (quantumPrivateKey !== undefined && quantumPrivateKey !== '') {
             keyring.importQuantumKey(quantumPrivateKey);
-        } else {
-            keyring.generateFreshQuantumKey();
         }
+        // Do NOT auto-generate quantum key - user must explicitly migrate
 
         return keyring;
     }
 
     /**
-     * Import from hex private key with mandatory quantum key
+     * Import from hex private key with optional quantum key.
+     * If no quantum key is provided, the keyring will NOT have a quantum keypair.
+     * The quantum key must be explicitly set later via importQuantumKey() or generateFreshQuantumKey().
      */
     public static fromPrivateKey(
         privateKeyHex: string,
@@ -97,15 +100,16 @@ export class SimpleKeyring {
 
         if (quantumPrivateKey !== undefined && quantumPrivateKey !== '') {
             keyring.importQuantumKey(quantumPrivateKey);
-        } else {
-            keyring.generateFreshQuantumKey();
         }
+        // Do NOT auto-generate quantum key - user must explicitly migrate
 
         return keyring;
     }
 
     /**
-     * Import a private key (WIF or hex format)
+     * Import a private key (WIF or hex format).
+     * If no quantum key is provided, the keyring will NOT have a quantum keypair.
+     * The quantum key must be explicitly set later via importQuantumKey() or generateFreshQuantumKey().
      */
     public importPrivateKey(privateKey: string, quantumPrivateKey?: string): void {
         if (privateKey === '') {
@@ -124,9 +128,8 @@ export class SimpleKeyring {
 
         if (quantumPrivateKey !== undefined && quantumPrivateKey !== '') {
             this.importQuantumKey(quantumPrivateKey);
-        } else {
-            this.generateFreshQuantumKey();
         }
+        // Do NOT auto-generate quantum key - user must explicitly migrate
     }
 
     /**
@@ -168,10 +171,31 @@ export class SimpleKeyring {
     }
 
     /**
-     * Check if keyring has keys
+     * Check if keyring has both classical and quantum keys
      */
     public hasKeys(): boolean {
         return this.keypair !== null && this.quantumKeypair !== null;
+    }
+
+    /**
+     * Check if keyring has the classical keypair (may or may not have quantum key)
+     */
+    public hasClassicalKey(): boolean {
+        return this.keypair !== null;
+    }
+
+    /**
+     * Check if keyring has a quantum keypair
+     */
+    public hasQuantumKey(): boolean {
+        return this.quantumKeypair !== null;
+    }
+
+    /**
+     * Check if quantum migration is needed (has classical but no quantum key)
+     */
+    public needsQuantumMigration(): boolean {
+        return this.keypair !== null && this.quantumKeypair === null;
     }
 
     /**
@@ -263,15 +287,33 @@ export class SimpleKeyring {
     }
 
     /**
-     * Export the quantum private key with chain code
+     * Export the quantum private key with chain code (for backup/restore)
      */
     public exportQuantumPrivateKey(): string {
         if (this.quantumKeypair?.privateKey === undefined) {
             throw new Error('SimpleKeyring: No quantum private key available');
         }
+
         // Combine private key and chain code for full export
         const privateKey = Buffer.from(this.quantumKeypair.privateKey);
         return Buffer.concat([privateKey, this.chainCode]).toString('hex');
+    }
+
+    /**
+     * Export the raw quantum private key WITHOUT chain code (for Wallet.fromWif)
+     */
+    public exportRawQuantumPrivateKey(): string {
+        if (this.quantumKeypair?.privateKey === undefined) {
+            throw new Error('SimpleKeyring: No quantum private key available');
+        }
+        return Buffer.from(this.quantumKeypair.privateKey).toString('hex');
+    }
+
+    /**
+     * Export the chain code (for use with Wallet.fromWif separately)
+     */
+    public exportChainCode(): Buffer {
+        return this.chainCode;
     }
 
     /**

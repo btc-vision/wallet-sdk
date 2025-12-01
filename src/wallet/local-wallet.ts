@@ -6,8 +6,7 @@
 import { type Network, networks, payments, Psbt, Transaction } from '@btc-vision/bitcoin';
 import { AddressTypes } from '@btc-vision/transaction';
 import { publicKeyToAddress, scriptPubKeyToAddress } from '@/address';
-import { HdKeyring } from '@/keyring';
-import { SimpleKeyring } from '@/keyring';
+import { HdKeyring, SimpleKeyring } from '@/keyring';
 import { signBip322Message, signMLDSA, signSchnorr } from '@/message';
 import type { AbstractWallet, MessageSigningMethod, SignPsbtOptions, ToSignInput } from '@/types';
 
@@ -234,13 +233,33 @@ export class LocalWallet implements AbstractWallet {
     }
 
     /**
-     * Export the quantum private key
+     * Export the quantum private key WITH chain code (for backup/restore)
      */
     public exportQuantumPrivateKey(): string {
         if (this.keyring instanceof SimpleKeyring) {
             return this.keyring.exportQuantumPrivateKey();
         }
         throw new Error('LocalWallet: Cannot export quantum key from HD keyring directly');
+    }
+
+    /**
+     * Export the raw quantum private key WITHOUT chain code (for Wallet.fromWif)
+     */
+    public exportRawQuantumPrivateKey(): string {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.exportRawQuantumPrivateKey();
+        }
+        throw new Error('LocalWallet: Cannot export quantum key from HD keyring directly');
+    }
+
+    /**
+     * Export the chain code
+     */
+    public exportChainCode(): Buffer {
+        if (this.keyring instanceof SimpleKeyring) {
+            return this.keyring.exportChainCode();
+        }
+        throw new Error('LocalWallet: Cannot export chain code from HD keyring directly');
     }
 
     /**
