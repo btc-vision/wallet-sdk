@@ -1,4 +1,18 @@
-export * from './hd-keyring';
-export * from './keystone-keyring';
-export * from './simple-keyring';
-export * from './interfaces/SimpleKeyringOptions';
+/**
+ * OPNet Wallet SDK - Keyring Module
+ * Exports all keyring implementations and utilities.
+ */
+
+export { HdKeyring } from './hd-keyring.js';
+export { SimpleKeyring } from './simple-keyring.js';
+export {
+    exportWallet,
+    importWallet,
+    serializeExport,
+    deserializeExport,
+    exportWalletToString,
+    importWalletFromString,
+    validateExport,
+    fromLegacyExport,
+    type UnifiedWalletExport
+} from './key-export.js';
