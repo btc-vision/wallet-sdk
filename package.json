@@ -52,7 +52,7 @@
     "dependencies": {
         "@btc-vision/bip32": "^6.0.3",
         "@btc-vision/bitcoin": "^6.4.11",
-        "@btc-vision/transaction": "^1.7.11",
+        "@btc-vision/transaction": "^1.7.12",
         "@keystonehq/keystone-sdk": "^0.11.5"
     },
     "devDependencies": {
