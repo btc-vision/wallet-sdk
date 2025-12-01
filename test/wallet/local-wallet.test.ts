@@ -186,14 +186,25 @@ describe('LocalWallet', () => {
     });
 
     describe('exportQuantumPrivateKey', () => {
-        it('should export quantum private key from WIF wallet', () => {
+        it('should export quantum private key from WIF wallet with quantum key', () => {
             const keyring = SimpleKeyring.generate();
             const wif = keyring.exportWIF();
+            const quantumKey = keyring.exportQuantumPrivateKey();
+            // Import WITH the quantum key
+            const wallet = LocalWallet.fromWIF(wif, AddressTypes.P2TR, networks.bitcoin, quantumKey);
+
+            const exportedKey = wallet.exportQuantumPrivateKey();
+
+            expect(exportedKey.length).toBeGreaterThan(64);
+        });
+
+        it('should throw for WIF wallet without quantum key', () => {
+            const keyring = SimpleKeyring.generate();
+            const wif = keyring.exportWIF();
+            // Import WITHOUT quantum key
             const wallet = LocalWallet.fromWIF(wif, AddressTypes.P2TR, networks.bitcoin);
 
-            const quantumKey = wallet.exportQuantumPrivateKey();
-
-            expect(quantumKey.length).toBeGreaterThan(64);
+            expect(() => wallet.exportQuantumPrivateKey()).toThrow('No quantum private key available');
         });
 
         it('should throw for mnemonic wallet', () => {

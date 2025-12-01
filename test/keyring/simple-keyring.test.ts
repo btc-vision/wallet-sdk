@@ -24,16 +24,17 @@ describe('SimpleKeyring', () => {
     });
 
     describe('fromWIF', () => {
-        it('should import from WIF with quantum key generation', () => {
+        it('should import from WIF without auto-generating quantum key', () => {
             // Generate a keyring to get a valid WIF
             const original = SimpleKeyring.generate();
             const wif = original.exportWIF();
 
             const imported = SimpleKeyring.fromWIF(wif, undefined, networks.bitcoin);
-            expect(imported.hasKeys()).toBe(true);
+            // Should have classical key but NOT quantum key (no auto-generation)
+            expect(imported.hasClassicalKey()).toBe(true);
+            expect(imported.hasQuantumKey()).toBe(false);
+            expect(imported.needsQuantumMigration()).toBe(true);
             expect(imported.getPublicKey()).toBe(original.getPublicKey());
-            // Quantum keys should be different (newly generated)
-            expect(imported.getQuantumPublicKey()).not.toBe(original.getQuantumPublicKey());
         });
 
         it('should import from WIF with existing quantum key', () => {
@@ -42,7 +43,22 @@ describe('SimpleKeyring', () => {
             const quantumKey = original.exportQuantumPrivateKey();
 
             const imported = SimpleKeyring.fromWIF(wif, quantumKey, networks.bitcoin);
+            expect(imported.hasKeys()).toBe(true);
+            expect(imported.needsQuantumMigration()).toBe(false);
             expect(imported.getPublicKey()).toBe(original.getPublicKey());
+        });
+
+        it('should allow explicit quantum key generation after import', () => {
+            const original = SimpleKeyring.generate();
+            const wif = original.exportWIF();
+
+            const imported = SimpleKeyring.fromWIF(wif, undefined, networks.bitcoin);
+            expect(imported.hasQuantumKey()).toBe(false);
+
+            // Explicitly generate quantum key
+            imported.generateFreshQuantumKey();
+            expect(imported.hasQuantumKey()).toBe(true);
+            expect(imported.needsQuantumMigration()).toBe(false);
         });
     });
 
