@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/wallet-sdk",
-    "version": "2.0.8",
+    "version": "2.0.9",
     "description": "OPNet Wallet SDK - Bitcoin wallet with post-quantum cryptography support (BIP360)",
     "keywords": [
         "bitcoin",

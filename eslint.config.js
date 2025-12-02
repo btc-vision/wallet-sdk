@@ -58,8 +58,7 @@ export default [
             'no-undef': 'off',
             'prefer-const': 'error',
             'no-empty': 'error',
-            eqeqeq: ['error', 'always'],
-            'no-console': 'warn'
+            eqeqeq: ['error', 'always']
         }
     },
 

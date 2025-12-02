@@ -38,7 +38,7 @@ export class HdKeyring {
         this.securityLevel = options?.securityLevel ?? MLDSASecurityLevel.LEVEL2;
         this.passphrase = options?.passphrase ?? '';
         this.addressType = options?.addressType ?? AddressTypes.P2TR;
-        this._hdPath = options?.hdPath ?? "m/84'/0'/0'";
+        this._hdPath = options?.hdPath ?? '';
 
         if (options?.mnemonic !== undefined) {
             this.initFromMnemonic(options.mnemonic);
@@ -467,7 +467,7 @@ export class HdKeyring {
         // Also check without trailing /0 for base paths like m/84'/0'/0'
         const standardPathBase = standardPath.slice(0, -2); // Remove /0
 
-        return this._hdPath !== standardPath && this._hdPath !== standardPathBase && this._hdPath !== '';
+        return !this._hdPath.includes(standardPathBase) && this._hdPath !== '';
     }
 
     private findWalletByPublicKey(publicKey: string): Wallet {
