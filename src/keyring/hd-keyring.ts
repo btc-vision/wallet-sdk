@@ -434,7 +434,7 @@ export class HdKeyring {
      */
     public getChainCode(publicKey: string): Buffer {
         const wallet = this.findWalletByPublicKey(publicKey);
-        return wallet.chainCode;
+        return Buffer.from(wallet.chainCode);
     }
 
     /**
