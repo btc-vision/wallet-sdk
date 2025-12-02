@@ -240,7 +240,15 @@ export class LocalWallet implements AbstractWallet {
         if (this.keyring instanceof SimpleKeyring) {
             return this.keyring.exportQuantumPrivateKey();
         }
-        throw new Error('LocalWallet: Cannot export quantum key from HD keyring directly');
+        // For HD keyrings, get the quantum key from the derived wallet
+        const wallet = this.keyring.getWallet(this.publicKey);
+        const mldsaPrivateKey = wallet.mldsaKeypair.privateKey;
+        if (mldsaPrivateKey === undefined) {
+            throw new Error('LocalWallet: No quantum private key available');
+        }
+        const privateKey = Buffer.from(mldsaPrivateKey);
+        const chainCode = wallet.chainCode;
+        return Buffer.concat([privateKey, chainCode]).toString('hex');
     }
 
     /**
@@ -250,7 +258,13 @@ export class LocalWallet implements AbstractWallet {
         if (this.keyring instanceof SimpleKeyring) {
             return this.keyring.exportRawQuantumPrivateKey();
         }
-        throw new Error('LocalWallet: Cannot export quantum key from HD keyring directly');
+        // For HD keyrings, get the quantum key from the derived wallet
+        const wallet = this.keyring.getWallet(this.publicKey);
+        const mldsaPrivateKey = wallet.mldsaKeypair.privateKey;
+        if (mldsaPrivateKey === undefined) {
+            throw new Error('LocalWallet: No quantum private key available');
+        }
+        return Buffer.from(mldsaPrivateKey).toString('hex');
     }
 
     /**
@@ -260,7 +274,8 @@ export class LocalWallet implements AbstractWallet {
         if (this.keyring instanceof SimpleKeyring) {
             return this.keyring.exportChainCode();
         }
-        throw new Error('LocalWallet: Cannot export chain code from HD keyring directly');
+        // For HD keyrings, get chain code from the derived wallet
+        return this.keyring.getChainCode(this.publicKey);
     }
 
     /**
