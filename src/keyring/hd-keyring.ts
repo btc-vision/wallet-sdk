@@ -33,8 +33,12 @@ export class HdKeyring {
     private addressType: AddressTypes;
     private readonly _hdPath: string;
 
-    constructor(options?: HdKeyringOptions) {
-        this.network = options?.network ?? networks.bitcoin;
+    constructor(options: Partial<HdKeyringOptions>) {
+        if (!options.network) {
+            throw new Error('HdKeyring: Network option is required');
+        }
+
+        this.network = options.network;
         this.securityLevel = options?.securityLevel ?? MLDSASecurityLevel.LEVEL2;
         this.passphrase = options?.passphrase ?? '';
         this.addressType = options?.addressType ?? AddressTypes.P2TR;

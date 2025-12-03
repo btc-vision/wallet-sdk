@@ -36,8 +36,12 @@ export class SimpleKeyring {
     private quantumKeypair: QuantumBIP32Interface | null = null;
     private chainCode: Buffer = Buffer.alloc(32);
 
-    constructor(options?: SimpleKeyringOptions) {
-        this.network = options?.network ?? networks.bitcoin;
+    constructor(options: Partial<SimpleKeyringOptions>) {
+        if (!options?.network) {
+            throw new Error('SimpleKeyring: Network option is required');
+        }
+
+        this.network = options.network;
         this.securityLevel = options?.securityLevel ?? MLDSASecurityLevel.LEVEL2;
 
         if (options?.privateKey !== undefined) {
