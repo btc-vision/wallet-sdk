@@ -207,10 +207,14 @@ describe('LocalWallet', () => {
             expect(() => wallet.exportQuantumPrivateKey()).toThrow('No quantum private key available');
         });
 
-        it('should throw for mnemonic wallet', () => {
+        it('should export quantum private key for mnemonic wallet', () => {
             const wallet = LocalWallet.fromMnemonic(testMnemonic, AddressTypes.P2TR, networks.bitcoin);
 
-            expect(() => wallet.exportQuantumPrivateKey()).toThrow();
+            // HD keyrings derive quantum keys via BIP360, so export should work
+            const quantumPrivateKey = wallet.exportQuantumPrivateKey();
+            expect(quantumPrivateKey).toBeDefined();
+            expect(typeof quantumPrivateKey).toBe('string');
+            expect(quantumPrivateKey.length).toBeGreaterThan(0);
         });
     });
 
