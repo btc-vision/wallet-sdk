@@ -107,7 +107,7 @@ describe('SimpleKeyring', () => {
         });
 
         it('should return empty array for uninitialized keyring', () => {
-            const keyring = new SimpleKeyring();
+            const keyring = new SimpleKeyring({ network: networks.bitcoin });
             expect(keyring.getAccounts()).toHaveLength(0);
         });
     });
@@ -244,17 +244,17 @@ describe('SimpleKeyring', () => {
 
     describe('error handling', () => {
         it('should throw when getting public key without initialization', () => {
-            const keyring = new SimpleKeyring();
+            const keyring = new SimpleKeyring({ network: networks.bitcoin });
             expect(() => keyring.getPublicKey()).toThrow();
         });
 
         it('should throw when getting quantum public key without initialization', () => {
-            const keyring = new SimpleKeyring();
+            const keyring = new SimpleKeyring({ network: networks.bitcoin });
             expect(() => keyring.getQuantumPublicKey()).toThrow();
         });
 
         it('should throw when exporting without initialization', () => {
-            const keyring = new SimpleKeyring();
+            const keyring = new SimpleKeyring({ network: networks.bitcoin });
             expect(() => keyring.exportPrivateKey()).toThrow();
         });
     });

@@ -9,12 +9,12 @@ describe('HdKeyring', () => {
 
     describe('constructor', () => {
         it('should create empty keyring', () => {
-            const keyring = new HdKeyring();
+            const keyring = new HdKeyring({ network: networks.bitcoin });
             expect(keyring.hasMnemonic()).toBe(false);
         });
 
         it('should create keyring with mnemonic', () => {
-            const keyring = new HdKeyring({ mnemonic: testMnemonic });
+            const keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
             expect(keyring.hasMnemonic()).toBe(true);
         });
 
@@ -35,7 +35,8 @@ describe('HdKeyring', () => {
         it('should activate indexes on construction', () => {
             const keyring = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0, 1, 2]
+                activeIndexes: [0, 1, 2],
+                network: networks.bitcoin
             });
             expect(keyring.getActiveIndexes()).toHaveLength(3);
         });
@@ -68,14 +69,14 @@ describe('HdKeyring', () => {
 
     describe('initFromMnemonic', () => {
         it('should initialize from mnemonic', () => {
-            const keyring = new HdKeyring();
+            const keyring = new HdKeyring({ network: networks.bitcoin });
             keyring.initFromMnemonic(testMnemonic);
             expect(keyring.hasMnemonic()).toBe(true);
             expect(keyring.getMnemonic()).toBe(testMnemonic);
         });
 
         it('should throw if already initialized', () => {
-            const keyring = new HdKeyring({ mnemonic: testMnemonic });
+            const keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
             expect(() => keyring.initFromMnemonic(testMnemonic)).toThrow();
         });
     });
@@ -84,7 +85,7 @@ describe('HdKeyring', () => {
         let keyring: HdKeyring;
 
         beforeEach(() => {
-            keyring = new HdKeyring({ mnemonic: testMnemonic });
+            keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
         });
 
         it('should derive wallet at index', () => {
@@ -107,7 +108,7 @@ describe('HdKeyring', () => {
         });
 
         it('should throw if no mnemonic', () => {
-            const emptyKeyring = new HdKeyring();
+            const emptyKeyring = new HdKeyring({ network: networks.bitcoin });
             expect(() => emptyKeyring.deriveWallet(0)).toThrow();
         });
     });
@@ -116,7 +117,7 @@ describe('HdKeyring', () => {
         let keyring: HdKeyring;
 
         beforeEach(() => {
-            keyring = new HdKeyring({ mnemonic: testMnemonic });
+            keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
         });
 
         it('should add accounts', () => {
@@ -136,7 +137,7 @@ describe('HdKeyring', () => {
         let keyring: HdKeyring;
 
         beforeEach(() => {
-            keyring = new HdKeyring({ mnemonic: testMnemonic });
+            keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
         });
 
         it('should activate specific indexes', () => {
@@ -156,14 +157,15 @@ describe('HdKeyring', () => {
 
     describe('getAccounts', () => {
         it('should return empty array for new keyring', () => {
-            const keyring = new HdKeyring({ mnemonic: testMnemonic });
+            const keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
             expect(keyring.getAccounts()).toHaveLength(0);
         });
 
         it('should return public keys for active accounts', () => {
             const keyring = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0, 1]
+                activeIndexes: [0, 1],
+                network: networks.bitcoin
             });
             const accounts = keyring.getAccounts();
             expect(accounts).toHaveLength(2);
@@ -177,7 +179,8 @@ describe('HdKeyring', () => {
         it('should return detailed account info', () => {
             const keyring = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0]
+                activeIndexes: [0],
+                network: networks.bitcoin
             });
             const infos = keyring.getAccountsInfo();
             expect(infos).toHaveLength(1);
@@ -193,7 +196,8 @@ describe('HdKeyring', () => {
         it('should return quantum public key for account', () => {
             const keyring = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0]
+                activeIndexes: [0],
+                network: networks.bitcoin
             });
             const publicKey = keyring.getAccounts()[0]!;
             const quantumPubKey = keyring.getQuantumPublicKey(publicKey);
@@ -206,7 +210,8 @@ describe('HdKeyring', () => {
         it('should return index for public key', () => {
             const keyring = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0, 5]
+                activeIndexes: [0, 5],
+                network: networks.bitcoin
             });
             const accounts = keyring.getAccounts();
             expect(keyring.getIndexByPublicKey(accounts[0]!)).toBe(0);
@@ -214,7 +219,7 @@ describe('HdKeyring', () => {
         });
 
         it('should return null for unknown public key', () => {
-            const keyring = new HdKeyring({ mnemonic: testMnemonic });
+            const keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
             expect(keyring.getIndexByPublicKey('unknown')).toBeNull();
         });
     });
@@ -223,7 +228,8 @@ describe('HdKeyring', () => {
         it('should remove account by public key', () => {
             const keyring = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0, 1]
+                activeIndexes: [0, 1],
+                network: networks.bitcoin
             });
             const accounts = keyring.getAccounts();
             keyring.removeAccount(accounts[0]!);
@@ -231,7 +237,7 @@ describe('HdKeyring', () => {
         });
 
         it('should throw for unknown public key', () => {
-            const keyring = new HdKeyring({ mnemonic: testMnemonic });
+            const keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
             expect(() => keyring.removeAccount('unknown')).toThrow();
         });
     });
@@ -240,7 +246,8 @@ describe('HdKeyring', () => {
         it('should export private key', () => {
             const keyring = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0]
+                activeIndexes: [0],
+                network: networks.bitcoin
             });
             const publicKey = keyring.getAccounts()[0]!;
             const privateKey = keyring.exportAccount(publicKey);
@@ -266,7 +273,7 @@ describe('HdKeyring', () => {
 
     describe('setAddressType', () => {
         it('should change address type', () => {
-            const keyring = new HdKeyring({ mnemonic: testMnemonic });
+            const keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
             keyring.setAddressType(AddressTypes.P2WPKH);
             expect(keyring.getAddressType()).toBe(AddressTypes.P2WPKH);
         });
@@ -274,7 +281,7 @@ describe('HdKeyring', () => {
 
     describe('getAddressesPage', () => {
         it('should return paginated addresses', () => {
-            const keyring = new HdKeyring({ mnemonic: testMnemonic });
+            const keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
             const page = keyring.getAddressesPage(0, 5);
             expect(page).toHaveLength(5);
             page.forEach((item, i) => {
@@ -284,7 +291,7 @@ describe('HdKeyring', () => {
         });
 
         it('should return different pages', () => {
-            const keyring = new HdKeyring({ mnemonic: testMnemonic });
+            const keyring = new HdKeyring({ mnemonic: testMnemonic, network: networks.bitcoin });
             const page0 = keyring.getAddressesPage(0, 5);
             const page1 = keyring.getAddressesPage(1, 5);
             expect(page0[0]?.address).not.toBe(page1[0]?.address);
@@ -295,11 +302,13 @@ describe('HdKeyring', () => {
         it('should derive same keys from same mnemonic', () => {
             const keyring1 = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0]
+                activeIndexes: [0],
+                network: networks.bitcoin
             });
             const keyring2 = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0]
+                activeIndexes: [0],
+                network: networks.bitcoin
             });
             expect(keyring1.getAccounts()[0]).toBe(keyring2.getAccounts()[0]);
         });
@@ -308,12 +317,14 @@ describe('HdKeyring', () => {
             const keyring1 = new HdKeyring({
                 mnemonic: testMnemonic,
                 passphrase: '',
-                activeIndexes: [0]
+                activeIndexes: [0],
+                network: networks.bitcoin
             });
             const keyring2 = new HdKeyring({
                 mnemonic: testMnemonic,
                 passphrase: 'different',
-                activeIndexes: [0]
+                activeIndexes: [0],
+                network: networks.bitcoin
             });
             expect(keyring1.getAccounts()[0]).not.toBe(keyring2.getAccounts()[0]);
         });

@@ -279,7 +279,8 @@ describe('Message Signing Module', () => {
         it('should sign with HD keyring derived wallet', () => {
             const keyring = new HdKeyring({
                 mnemonic: testMnemonic,
-                activeIndexes: [0]
+                activeIndexes: [0],
+                network: networks.bitcoin
             });
             const publicKey = keyring.getAccounts()[0]!;
             const wallet = keyring.getWallet(publicKey);
