@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { networks } from '@btc-vision/bitcoin';
-import { AddressTypes, OPNetNetwork } from '@btc-vision/transaction';
+import { AddressTypes, WalletNetworks } from '@btc-vision/transaction';
 import {
     addressToScriptPubKey,
     decodeAddress,
@@ -171,7 +171,7 @@ describe('Address Module', () => {
             const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
             const decoded = decodeAddress(address);
             expect(decoded).not.toBeNull();
-            expect(decoded?.networkType).toBe(OPNetNetwork.Mainnet);
+            expect(decoded?.networkType).toBe(WalletNetworks.Mainnet);
             expect(decoded?.addressType).toBe(AddressTypes.P2WPKH);
         });
 
@@ -179,7 +179,7 @@ describe('Address Module', () => {
             const address = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
             const decoded = decodeAddress(address);
             expect(decoded).not.toBeNull();
-            expect(decoded?.networkType).toBe(OPNetNetwork.Testnet);
+            expect(decoded?.networkType).toBe(WalletNetworks.Testnet);
         });
 
         it('should return null for invalid address', () => {

@@ -132,7 +132,7 @@ export class HdKeyring {
             const quantumPath = `m/360'/${coinType}'/0'/0/${index}`;
             wallet = this.mnemonic.deriveCustomPath(classicalPath, quantumPath);
         } else {
-            wallet = this.mnemonic.deriveUnisat(this.addressType, index);
+            wallet = this.mnemonic.deriveOPWallet(this.addressType, index);
         }
 
         this.wallets.set(index, wallet);
@@ -423,7 +423,7 @@ export class HdKeyring {
                 const quantumPath = `m/360'/${coinType}'/0'/0/${i}`;
                 wallet = this.mnemonic.deriveCustomPath(classicalPath, quantumPath);
             } else {
-                wallet = this.mnemonic.deriveUnisat(this.addressType, i);
+                wallet = this.mnemonic.deriveOPWallet(this.addressType, i);
             }
 
             const address = this.getAddressFromWallet(wallet);

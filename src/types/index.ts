@@ -4,7 +4,7 @@
  */
 
 import type { Network, Psbt } from '@btc-vision/bitcoin';
-import { AddressTypes, MLDSASecurityLevel, OPNetNetwork, type QuantumBIP32Interface } from '@btc-vision/transaction';
+import { AddressTypes, MLDSASecurityLevel, type QuantumBIP32Interface, WalletNetworks } from '@btc-vision/transaction';
 import type { ECPairInterface } from 'ecpair';
 
 /**
@@ -67,7 +67,7 @@ export interface ToSignInput {
  * Result of an address decode operation
  */
 export interface DecodedAddress {
-    readonly networkType: OPNetNetwork;
+    readonly networkType: WalletNetworks;
     readonly addressType: AddressTypes;
     readonly scriptPubKey: Buffer;
 }
@@ -177,7 +177,7 @@ export interface Bip322Signature {
     readonly address: string;
     readonly message: string | Buffer;
     readonly signature: string;
-    readonly networkType: OPNetNetwork;
+    readonly networkType: WalletNetworks;
 }
 
 /**

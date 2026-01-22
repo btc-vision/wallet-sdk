@@ -6,7 +6,7 @@
 
 import * as bitcoin from '@btc-vision/bitcoin';
 import { address as bitcoinAddress, type Network, payments } from '@btc-vision/bitcoin';
-import { AddressTypes, AddressVerificator, OPNetNetwork } from '@btc-vision/transaction';
+import { AddressTypes, AddressVerificator, WalletNetworks } from '@btc-vision/transaction';
 import { toNetwork } from '@/network';
 import type { DecodedAddress } from '@/types';
 
@@ -137,10 +137,10 @@ export function decodeAddress(address: string): DecodedAddress | null {
     const regtest = bitcoin.networks.regtest;
 
     // Try each network to decode the address
-    const networksToTry: { network: Network; networkType: OPNetNetwork }[] = [
-        { network: mainnet, networkType: OPNetNetwork.Mainnet },
-        { network: testnet, networkType: OPNetNetwork.Testnet },
-        { network: regtest, networkType: OPNetNetwork.Regtest }
+    const networksToTry: { network: Network; networkType: WalletNetworks }[] = [
+        { network: mainnet, networkType: WalletNetworks.Mainnet },
+        { network: testnet, networkType: WalletNetworks.Testnet },
+        { network: regtest, networkType: WalletNetworks.Regtest }
     ];
 
     for (const { network, networkType } of networksToTry) {
@@ -193,28 +193,28 @@ export function isP2PKHOrP2SHAddress(address: string, network: Network): boolean
 }
 
 /**
- * Convert OPNetNetwork to Network and validate address
+ * Convert WalletNetworks to Network and validate address
  */
-export function isValidAddressForNetworkType(address: string, networkType: OPNetNetwork): boolean {
+export function isValidAddressForNetworkType(address: string, networkType: WalletNetworks): boolean {
     const network = toNetwork(networkType);
     return isValidAddress(address, network);
 }
 
 /**
- * Get address type with OPNetNetwork parameter
+ * Get address type with WalletNetworks parameter
  */
-export function getAddressType(address: string, networkType: OPNetNetwork): AddressTypes | null {
+export function getAddressType(address: string, networkType: WalletNetworks): AddressTypes | null {
     const network = toNetwork(networkType);
     return detectAddressType(address, network);
 }
 
 /**
- * Convert OPNetNetwork-based operations to Network-based
+ * Convert WalletNetworks-based operations to Network-based
  */
 export function publicKeyToAddressWithNetworkType(
     publicKey: Buffer | string,
     addressType: AddressTypes,
-    networkType: OPNetNetwork
+    networkType: WalletNetworks
 ): string {
     const network = toNetwork(networkType);
     return publicKeyToAddress(publicKey, addressType, network);

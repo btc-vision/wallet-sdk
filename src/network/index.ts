@@ -4,42 +4,42 @@
  */
 
 import { type Network, networks } from '@btc-vision/bitcoin';
-import { OPNetNetwork } from '@btc-vision/transaction';
+import { WalletNetworks } from '@btc-vision/transaction';
 
 /**
- * Convert OPNetNetwork enum to @btc-vision/bitcoin Network object
+ * Convert WalletNetworks enum to @btc-vision/bitcoin Network object
  */
-export function toNetwork(networkType: OPNetNetwork): Network {
+export function toNetwork(networkType: WalletNetworks): Network {
     switch (networkType) {
-        case OPNetNetwork.Mainnet: {
+        case WalletNetworks.Mainnet: {
             return networks.bitcoin;
         }
-        case OPNetNetwork.Testnet: {
+        case WalletNetworks.Testnet: {
             return networks.testnet;
         }
-        case OPNetNetwork.Regtest: {
+        case WalletNetworks.Regtest: {
             return networks.regtest;
         }
     }
 }
 
 /**
- * Convert @btc-vision/bitcoin Network object to OPNetNetwork enum
+ * Convert @btc-vision/bitcoin Network object to WalletNetworks enum
  */
-export function toNetworkType(network: Network): OPNetNetwork {
+export function toNetworkType(network: Network): WalletNetworks {
     if (network.bech32 === networks.bitcoin.bech32) {
-        return OPNetNetwork.Mainnet;
+        return WalletNetworks.Mainnet;
     }
     if (network.bech32 === networks.testnet.bech32) {
-        return OPNetNetwork.Testnet;
+        return WalletNetworks.Testnet;
     }
-    return OPNetNetwork.Regtest;
+    return WalletNetworks.Regtest;
 }
 
 /**
  * Get the bech32 prefix for a network type
  */
-export function getBech32Prefix(networkType: OPNetNetwork): string {
+export function getBech32Prefix(networkType: WalletNetworks): string {
     const network = toNetwork(networkType);
     return network.bech32;
 }
@@ -47,15 +47,15 @@ export function getBech32Prefix(networkType: OPNetNetwork): string {
 /**
  * Detect network type from an address
  */
-export function detectNetworkFromAddress(address: string): OPNetNetwork | null {
+export function detectNetworkFromAddress(address: string): WalletNetworks | null {
     if (address.startsWith('bc1') || address.startsWith('1') || address.startsWith('3')) {
-        return OPNetNetwork.Mainnet;
+        return WalletNetworks.Mainnet;
     }
     if (address.startsWith('tb1') || address.startsWith('m') || address.startsWith('n') || address.startsWith('2')) {
-        return OPNetNetwork.Testnet;
+        return WalletNetworks.Testnet;
     }
     if (address.startsWith('bcrt1')) {
-        return OPNetNetwork.Regtest;
+        return WalletNetworks.Regtest;
     }
     return null;
 }
@@ -63,7 +63,7 @@ export function detectNetworkFromAddress(address: string): OPNetNetwork | null {
 /**
  * Validate that an address matches the expected network
  */
-export function validateAddressNetwork(address: string, expectedNetwork: OPNetNetwork): boolean {
+export function validateAddressNetwork(address: string, expectedNetwork: WalletNetworks): boolean {
     const detectedNetwork = detectNetworkFromAddress(address);
     return detectedNetwork === expectedNetwork;
 }

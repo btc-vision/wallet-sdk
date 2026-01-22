@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { networks, Psbt } from '@btc-vision/bitcoin';
-import { AddressTypes, OPNetNetwork } from '@btc-vision/transaction';
+import { AddressTypes, WalletNetworks } from '@btc-vision/transaction';
 import {
     generateBip322Psbt,
     HdKeyring,
@@ -156,14 +156,14 @@ describe('BIP322 Message Signing', () => {
     });
 
     describe('signBip322MessageWithNetworkType', () => {
-        it('should sign message with OPNetNetwork', async () => {
+        it('should sign message with WalletNetworks', async () => {
             const keyring = SimpleKeyring.generate();
             const address = keyring.getAddress(AddressTypes.P2WPKH);
 
             const result = await signBip322MessageWithNetworkType(
                 testMessage,
                 address,
-                OPNetNetwork.Mainnet,
+                WalletNetworks.Mainnet,
                 async (psbt) => {
                     const inputs = [{ index: 0, publicKey: keyring.getPublicKey() }];
                     keyring.signTransaction(psbt, inputs);
@@ -173,21 +173,21 @@ describe('BIP322 Message Signing', () => {
 
             expect(result.address).toBe(address);
             expect(result.message).toBe(testMessage);
-            expect(result.networkType).toBe(OPNetNetwork.Mainnet);
+            expect(result.networkType).toBe(WalletNetworks.Mainnet);
             expect(typeof result.signature).toBe('string');
         });
     });
 
     describe('verifyBip322MessageWithNetworkType', () => {
         // TODO: BIP322 verification requires review
-        it.skip('should verify with OPNetNetwork', async () => {
+        it.skip('should verify with WalletNetworks', async () => {
             const keyring = SimpleKeyring.generate();
             const address = keyring.getAddress(AddressTypes.P2WPKH);
 
             const result = await signBip322MessageWithNetworkType(
                 testMessage,
                 address,
-                OPNetNetwork.Mainnet,
+                WalletNetworks.Mainnet,
                 async (psbt) => {
                     const inputs = [{ index: 0, publicKey: keyring.getPublicKey() }];
                     keyring.signTransaction(psbt, inputs);
@@ -199,7 +199,7 @@ describe('BIP322 Message Signing', () => {
                 address,
                 testMessage,
                 result.signature,
-                OPNetNetwork.Mainnet
+                WalletNetworks.Mainnet
             );
             expect(isValid).toBe(true);
         });

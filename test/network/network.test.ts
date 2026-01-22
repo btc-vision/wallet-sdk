@@ -1,24 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { networks } from '@btc-vision/bitcoin';
 import { detectNetworkFromAddress, getBech32Prefix, toNetwork, toNetworkType, validateAddressNetwork } from '../../src';
-import { OPNetNetwork } from '@btc-vision/transaction';
+import { WalletNetworks } from '@btc-vision/transaction';
 
 describe('Network Module', () => {
     describe('toNetwork', () => {
         it('should convert MAINNET to bitcoin network', () => {
-            const network = toNetwork(OPNetNetwork.Mainnet);
+            const network = toNetwork(WalletNetworks.Mainnet);
             expect(network.bech32).toBe('bc');
             expect(network).toBe(networks.bitcoin);
         });
 
         it('should convert TESTNET to testnet network', () => {
-            const network = toNetwork(OPNetNetwork.Testnet);
+            const network = toNetwork(WalletNetworks.Testnet);
             expect(network.bech32).toBe('tb');
             expect(network).toBe(networks.testnet);
         });
 
         it('should convert REGTEST to regtest network', () => {
-            const network = toNetwork(OPNetNetwork.Regtest);
+            const network = toNetwork(WalletNetworks.Regtest);
             expect(network.bech32).toBe('bcrt');
             expect(network).toBe(networks.regtest);
         });
@@ -27,63 +27,63 @@ describe('Network Module', () => {
     describe('toNetworkType', () => {
         it('should convert bitcoin network to MAINNET', () => {
             const networkType = toNetworkType(networks.bitcoin);
-            expect(networkType).toBe(OPNetNetwork.Mainnet);
+            expect(networkType).toBe(WalletNetworks.Mainnet);
         });
 
         it('should convert testnet network to TESTNET', () => {
             const networkType = toNetworkType(networks.testnet);
-            expect(networkType).toBe(OPNetNetwork.Testnet);
+            expect(networkType).toBe(WalletNetworks.Testnet);
         });
 
         it('should convert regtest network to REGTEST', () => {
             const networkType = toNetworkType(networks.regtest);
-            expect(networkType).toBe(OPNetNetwork.Regtest);
+            expect(networkType).toBe(WalletNetworks.Regtest);
         });
     });
 
     describe('getBech32Prefix', () => {
         it('should return bc for mainnet', () => {
-            expect(getBech32Prefix(OPNetNetwork.Mainnet)).toBe('bc');
+            expect(getBech32Prefix(WalletNetworks.Mainnet)).toBe('bc');
         });
 
         it('should return tb for testnet', () => {
-            expect(getBech32Prefix(OPNetNetwork.Testnet)).toBe('tb');
+            expect(getBech32Prefix(WalletNetworks.Testnet)).toBe('tb');
         });
 
         it('should return bcrt for regtest', () => {
-            expect(getBech32Prefix(OPNetNetwork.Regtest)).toBe('bcrt');
+            expect(getBech32Prefix(WalletNetworks.Regtest)).toBe('bcrt');
         });
     });
 
     describe('detectNetworkFromAddress', () => {
         it('should detect mainnet from bc1 address', () => {
             const address = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
-            expect(detectNetworkFromAddress(address)).toBe(OPNetNetwork.Mainnet);
+            expect(detectNetworkFromAddress(address)).toBe(WalletNetworks.Mainnet);
         });
 
         it('should detect mainnet from 1 address', () => {
             const address = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2';
-            expect(detectNetworkFromAddress(address)).toBe(OPNetNetwork.Mainnet);
+            expect(detectNetworkFromAddress(address)).toBe(WalletNetworks.Mainnet);
         });
 
         it('should detect mainnet from 3 address', () => {
             const address = '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy';
-            expect(detectNetworkFromAddress(address)).toBe(OPNetNetwork.Mainnet);
+            expect(detectNetworkFromAddress(address)).toBe(WalletNetworks.Mainnet);
         });
 
         it('should detect testnet from tb1 address', () => {
             const address = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
-            expect(detectNetworkFromAddress(address)).toBe(OPNetNetwork.Testnet);
+            expect(detectNetworkFromAddress(address)).toBe(WalletNetworks.Testnet);
         });
 
         it('should detect testnet from m address', () => {
             const address = 'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn';
-            expect(detectNetworkFromAddress(address)).toBe(OPNetNetwork.Testnet);
+            expect(detectNetworkFromAddress(address)).toBe(WalletNetworks.Testnet);
         });
 
         it('should detect regtest from bcrt1 address', () => {
             const address = 'bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080';
-            expect(detectNetworkFromAddress(address)).toBe(OPNetNetwork.Regtest);
+            expect(detectNetworkFromAddress(address)).toBe(WalletNetworks.Regtest);
         });
 
         it('should return null for invalid address', () => {
@@ -95,17 +95,17 @@ describe('Network Module', () => {
     describe('validateAddressNetwork', () => {
         it('should validate mainnet address on mainnet', () => {
             const address = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
-            expect(validateAddressNetwork(address, OPNetNetwork.Mainnet)).toBe(true);
+            expect(validateAddressNetwork(address, WalletNetworks.Mainnet)).toBe(true);
         });
 
         it('should reject mainnet address on testnet', () => {
             const address = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
-            expect(validateAddressNetwork(address, OPNetNetwork.Testnet)).toBe(false);
+            expect(validateAddressNetwork(address, WalletNetworks.Testnet)).toBe(false);
         });
 
         it('should validate testnet address on testnet', () => {
             const address = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
-            expect(validateAddressNetwork(address, OPNetNetwork.Testnet)).toBe(true);
+            expect(validateAddressNetwork(address, WalletNetworks.Testnet)).toBe(true);
         });
     });
 });

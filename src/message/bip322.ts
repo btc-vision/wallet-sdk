@@ -13,7 +13,7 @@ import {
     Psbt,
     Transaction
 } from '@btc-vision/bitcoin';
-import { AddressTypes, OPNetNetwork } from '@btc-vision/transaction';
+import { AddressTypes, WalletNetworks } from '@btc-vision/transaction';
 import { detectAddressType } from '@/address';
 import { toNetwork } from '@/network';
 import type { Bip322Signature } from '@/types';
@@ -300,12 +300,12 @@ export function verifyBip322Message(
 }
 
 /**
- * Sign a message using BIP322 with OPNetNetwork parameter
+ * Sign a message using BIP322 with WalletNetworks parameter
  */
 export async function signBip322MessageWithNetworkType(
     message: string | Buffer,
     address: string,
-    networkType: OPNetNetwork,
+    networkType: WalletNetworks,
     signPsbt: (psbt: Psbt) => Promise<Psbt>
 ): Promise<Bip322Signature> {
     const network = toNetwork(networkType);
@@ -320,13 +320,13 @@ export async function signBip322MessageWithNetworkType(
 }
 
 /**
- * Verify a BIP322 signature with OPNetNetwork parameter
+ * Verify a BIP322 signature with WalletNetworks parameter
  */
 export function verifyBip322MessageWithNetworkType(
     address: string,
     message: string | Buffer,
     signature: string,
-    networkType: OPNetNetwork
+    networkType: WalletNetworks
 ): boolean {
     const network = toNetwork(networkType);
     return verifyBip322Message(address, message, signature, network);
