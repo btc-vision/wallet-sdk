@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/wallet-sdk",
-    "version": "2.0.14",
+    "version": "2.1.0",
     "description": "OPNet Wallet SDK - Bitcoin wallet with post-quantum cryptography support (BIP360)",
     "keywords": [
         "bitcoin",
@@ -54,16 +54,14 @@
         "@btc-vision/bip32": "^6.0.3",
         "@btc-vision/bitcoin": "^6.5.5",
         "@btc-vision/transaction": "^1.8.0-beta.0",
-        "@keystonehq/keystone-sdk": "^0.11.6",
-        "ecpair": "^2.1.0",
-        "opnet": "^1.8.1-beta.3"
+        "ecpair": "^2.1.0"
     },
     "devDependencies": {
         "@types/node": "^25.0.10",
         "@typescript-eslint/eslint-plugin": "^8.53.1",
         "@typescript-eslint/parser": "^8.53.1",
         "@vitejs/plugin-react": "^5.1.2",
-        "@vitest/coverage-v8": "^4.0.17",
+        "@vitest/coverage-v8": "^4.0.18",
         "eslint": "^9.39.2",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.5",
@@ -74,7 +72,7 @@
         "vite": "^7.3.1",
         "vite-plugin-dts": "^4.5.4",
         "vite-plugin-node-polyfills": "^0.25.0",
-        "vitest": "^4.0.17"
+        "vitest": "^4.0.18"
     },
     "engines": {
         "node": ">=21.0.0"
