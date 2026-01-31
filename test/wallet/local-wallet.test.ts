@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { networks, Psbt } from '@btc-vision/bitcoin';
+import { alloc, networks, Psbt, toSatoshi, type Bytes32 } from '@btc-vision/bitcoin';
 import { AddressTypes } from '@btc-vision/transaction';
 import { LocalWallet, SimpleKeyring } from '../../src';
 
@@ -244,16 +244,16 @@ describe('LocalWallet', () => {
             // Create a simple PSBT
             const psbt = new Psbt({ network: networks.regtest });
             psbt.addInput({
-                hash: Buffer.alloc(32, 1),
+                hash: new Uint8Array(32).fill(1) as Bytes32,
                 index: 0,
                 witnessUtxo: {
                     script: require('@btc-vision/bitcoin').address.toOutputScript(address, networks.regtest),
-                    value: 10000
+                    value: toSatoshi(10000n)
                 }
             });
             psbt.addOutput({
                 address,
-                value: 9000
+                value: toSatoshi(9000n)
             });
 
             const signedPsbt = wallet.signPsbt(psbt, { autoFinalized: true });
@@ -267,16 +267,16 @@ describe('LocalWallet', () => {
 
             const psbt = new Psbt({ network: networks.regtest });
             psbt.addInput({
-                hash: Buffer.alloc(32, 1),
+                hash: new Uint8Array(32).fill(1) as Bytes32,
                 index: 0,
                 witnessUtxo: {
                     script: require('@btc-vision/bitcoin').address.toOutputScript(address, networks.regtest),
-                    value: 10000
+                    value: toSatoshi(10000n)
                 }
             });
             psbt.addOutput({
                 address,
-                value: 9000
+                value: toSatoshi(9000n)
             });
 
             const signedPsbt = wallet.signPsbt(psbt, { autoFinalized: false });
@@ -291,16 +291,16 @@ describe('LocalWallet', () => {
 
             const psbt = new Psbt({ network: networks.regtest });
             psbt.addInput({
-                hash: Buffer.alloc(32, 1),
+                hash: new Uint8Array(32).fill(1) as Bytes32,
                 index: 0,
                 witnessUtxo: {
                     script: require('@btc-vision/bitcoin').address.toOutputScript(otherAddress, networks.regtest),
-                    value: 10000
+                    value: toSatoshi(10000n)
                 }
             });
             psbt.addOutput({
                 address: otherAddress,
-                value: 9000
+                value: toSatoshi(9000n)
             });
 
             expect(() => wallet.signPsbt(psbt)).toThrow('No inputs to sign');

@@ -3,7 +3,8 @@
  * Full-featured local wallet implementation with quantum support.
  */
 
-import { type Network, networks, payments, Psbt, Transaction } from '@btc-vision/bitcoin';
+import { equals, type Network, networks, payments, Psbt, Transaction, type XOnlyPublicKey } from '@btc-vision/bitcoin';
+import { createXOnlyPublicKey, fromHexInternal, toHex, concatBytes } from '@btc-vision/ecpair';
 import { AddressTypes } from '@btc-vision/transaction';
 import { publicKeyToAddress, scriptPubKeyToAddress } from '@/address';
 import { HdKeyring } from '@/keyring';
@@ -31,7 +32,7 @@ export class LocalWallet implements AbstractWallet {
         this.network = network;
         this.addressType = addressType;
         this.publicKey = publicKey;
-        this.address = publicKeyToAddress(Buffer.from(publicKey, 'hex'), addressType, network);
+        this.address = publicKeyToAddress(fromHexInternal(publicKey), addressType, network);
     }
 
     /**
@@ -160,13 +161,14 @@ export class LocalWallet implements AbstractWallet {
             const lostInternalPubkey = psbtInput.tapInternalKey === undefined;
 
             if (isNotSigned && isP2TR && lostInternalPubkey) {
-                const pubkeyBuffer = Buffer.from(this.publicKey, 'hex');
-                const tapInternalKey = pubkeyBuffer.length === 33 ? pubkeyBuffer.subarray(1, 33) : pubkeyBuffer;
+                const pubkeyBytes: Uint8Array = fromHexInternal(this.publicKey);
+                const xOnlyBytes: Uint8Array = pubkeyBytes.length === 33 ? pubkeyBytes.subarray(1, 33) : pubkeyBytes;
+                const tapInternalKey: XOnlyPublicKey = createXOnlyPublicKey(xOnlyBytes);
                 const { output } = payments.p2tr({
                     internalPubkey: tapInternalKey,
                     network: this.network
                 });
-                if (psbtInput.witnessUtxo?.script.toString('hex') === output?.toString('hex')) {
+                if (output !== undefined && psbtInput.witnessUtxo !== undefined && equals(psbtInput.witnessUtxo.script, output)) {
                     psbtInput.tapInternalKey = tapInternalKey;
                 }
             }
@@ -192,7 +194,7 @@ export class LocalWallet implements AbstractWallet {
     /**
      * Sign a message
      */
-    public async signMessage(message: string | Buffer, method: MessageSigningMethod): Promise<string> {
+    public async signMessage(message: string | Uint8Array, method: MessageSigningMethod): Promise<string> {
         switch (method) {
             case 'bip322-simple': {
                 return await signBip322Message(message, this.address, this.network, (psbt) => {
@@ -203,12 +205,12 @@ export class LocalWallet implements AbstractWallet {
             case 'schnorr': {
                 const keypair = this.getKeypair();
                 const result = signSchnorr(keypair, message);
-                return Buffer.from(result.signature).toString('hex');
+                return toHex(result.signature);
             }
             case 'mldsa': {
                 const quantumKeypair = this.getQuantumKeypair();
                 const result = signMLDSA(quantumKeypair, message);
-                return Buffer.from(result.signature).toString('hex');
+                return toHex(result.signature);
             }
         }
     }
@@ -242,13 +244,11 @@ export class LocalWallet implements AbstractWallet {
         }
         // For HD keyrings, get the quantum key from the derived wallet
         const wallet = this.keyring.getWallet(this.publicKey);
-        const mldsaPrivateKey = wallet.mldsaKeypair.privateKey;
+        const mldsaPrivateKey: Uint8Array | undefined = wallet.mldsaKeypair.privateKey;
         if (mldsaPrivateKey === undefined) {
             throw new Error('LocalWallet: No quantum private key available');
         }
-        const privateKey = Buffer.from(mldsaPrivateKey);
-        const chainCode = wallet.chainCode;
-        return Buffer.concat([privateKey, chainCode]).toString('hex');
+        return toHex(concatBytes(mldsaPrivateKey, wallet.chainCode));
     }
 
     /**
@@ -260,17 +260,17 @@ export class LocalWallet implements AbstractWallet {
         }
         // For HD keyrings, get the quantum key from the derived wallet
         const wallet = this.keyring.getWallet(this.publicKey);
-        const mldsaPrivateKey = wallet.mldsaKeypair.privateKey;
+        const mldsaPrivateKey: Uint8Array | undefined = wallet.mldsaKeypair.privateKey;
         if (mldsaPrivateKey === undefined) {
             throw new Error('LocalWallet: No quantum private key available');
         }
-        return Buffer.from(mldsaPrivateKey).toString('hex');
+        return toHex(mldsaPrivateKey);
     }
 
     /**
      * Export the chain code
      */
-    public exportChainCode(): Buffer {
+    public exportChainCode(): Uint8Array {
         if (this.keyring instanceof SimpleKeyring) {
             return this.keyring.exportChainCode();
         }
@@ -339,7 +339,7 @@ export class LocalWallet implements AbstractWallet {
                     continue;
                 }
 
-                let script: Buffer | undefined;
+                let script: Uint8Array | undefined;
                 if (input.witnessUtxo !== undefined) {
                     script = input.witnessUtxo.script;
                 } else if (input.nonWitnessUtxo !== undefined) {

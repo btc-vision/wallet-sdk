@@ -6,7 +6,7 @@
 
 import { crypto as bitcoinCrypto, type Network, networks } from '@btc-vision/bitcoin';
 import { EcKeyPair, MLDSASecurityLevel, QuantumBIP32Factory } from '@btc-vision/transaction';
-import type { ECPairInterface } from 'ecpair';
+import { type UniversalSigner, fromHexInternal, toHex } from '@btc-vision/ecpair';
 import type { ExportedWallet } from '@/types';
 
 const EXPORT_VERSION = 1;
@@ -35,9 +35,11 @@ export interface UnifiedWalletExport {
 /**
  * Calculate checksum for wallet export data
  */
+const textEncoder = new TextEncoder();
+
 function calculateChecksum(data: string): string {
-    const hash = bitcoinCrypto.sha256(Buffer.from(data, 'utf8'));
-    return hash.subarray(0, 4).toString('hex');
+    const hash: Uint8Array = bitcoinCrypto.sha256(textEncoder.encode(data));
+    return toHex(hash.subarray(0, 4));
 }
 
 /**
@@ -77,11 +79,11 @@ function getNetworkFromName(name: string): Network {
  * Export wallet keys to unified format
  */
 export function exportWallet(
-    classicalPrivateKey: Buffer,
-    classicalPublicKey: Buffer,
+    classicalPrivateKey: Uint8Array,
+    classicalPublicKey: Uint8Array,
     quantumPrivateKey: Uint8Array,
     quantumPublicKey: Uint8Array,
-    chainCode: Buffer,
+    chainCode: Uint8Array,
     securityLevel: MLDSASecurityLevel,
     network: Network
 ): UnifiedWalletExport {
@@ -90,14 +92,14 @@ export function exportWallet(
         version: EXPORT_VERSION,
         network: getNetworkName(network),
         classical: {
-            privateKey: classicalPrivateKey.toString('hex'),
-            publicKey: classicalPublicKey.toString('hex')
+            privateKey: toHex(classicalPrivateKey),
+            publicKey: toHex(classicalPublicKey)
         },
         quantum: {
-            privateKey: Buffer.from(quantumPrivateKey).toString('hex'),
-            publicKey: Buffer.from(quantumPublicKey).toString('hex'),
+            privateKey: toHex(quantumPrivateKey),
+            publicKey: toHex(quantumPublicKey),
             securityLevel,
-            chainCode: chainCode.toString('hex')
+            chainCode: toHex(chainCode)
         }
     };
 
@@ -114,11 +116,11 @@ export function exportWallet(
  * Import wallet keys from unified format
  */
 export function importWallet(exportData: UnifiedWalletExport): {
-    keypair: ECPairInterface;
+    keypair: UniversalSigner;
     quantumKeypair: ReturnType<typeof QuantumBIP32Factory.fromPrivateKey>;
     network: Network;
     securityLevel: MLDSASecurityLevel;
-    chainCode: Buffer;
+    chainCode: Uint8Array;
 } {
     // Validate magic header
     if (exportData.magic !== MAGIC_HEADER) {
@@ -143,15 +145,15 @@ export function importWallet(exportData: UnifiedWalletExport): {
         throw new Error('Invalid wallet export: checksum mismatch');
     }
 
-    const network = getNetworkFromName(exportData.network);
-    const chainCode = Buffer.from(exportData.quantum.chainCode, 'hex');
+    const network: Network = getNetworkFromName(exportData.network);
+    const chainCode: Uint8Array = fromHexInternal(exportData.quantum.chainCode);
 
     // Restore classical keypair
-    const classicalPrivateKey = Buffer.from(exportData.classical.privateKey, 'hex');
-    const keypair = EcKeyPair.fromPrivateKey(classicalPrivateKey, network);
+    const classicalPrivateKey: Uint8Array = fromHexInternal(exportData.classical.privateKey);
+    const keypair: UniversalSigner = EcKeyPair.fromPrivateKey(classicalPrivateKey, network);
 
     // Restore quantum keypair
-    const quantumPrivateKey = Buffer.from(exportData.quantum.privateKey, 'hex');
+    const quantumPrivateKey: Uint8Array = fromHexInternal(exportData.quantum.privateKey);
     const quantumKeypair = QuantumBIP32Factory.fromPrivateKey(
         quantumPrivateKey,
         chainCode,
@@ -172,8 +174,8 @@ export function importWallet(exportData: UnifiedWalletExport): {
  * Serialize unified export to string (base64 encoded JSON)
  */
 export function serializeExport(exportData: UnifiedWalletExport): string {
-    const json = JSON.stringify(exportData);
-    return Buffer.from(json, 'utf8').toString('base64');
+    const json: string = JSON.stringify(exportData);
+    return btoa(json);
 }
 
 /**
@@ -181,7 +183,7 @@ export function serializeExport(exportData: UnifiedWalletExport): string {
  */
 export function deserializeExport(serialized: string): UnifiedWalletExport {
     try {
-        const json = Buffer.from(serialized, 'base64').toString('utf8');
+        const json: string = atob(serialized);
         return JSON.parse(json) as UnifiedWalletExport;
     } catch {
         throw new Error('Invalid wallet export: failed to deserialize');
@@ -192,11 +194,11 @@ export function deserializeExport(serialized: string): UnifiedWalletExport {
  * Export wallet to portable string format
  */
 export function exportWalletToString(
-    classicalPrivateKey: Buffer,
-    classicalPublicKey: Buffer,
+    classicalPrivateKey: Uint8Array,
+    classicalPublicKey: Uint8Array,
     quantumPrivateKey: Uint8Array,
     quantumPublicKey: Uint8Array,
-    chainCode: Buffer,
+    chainCode: Uint8Array,
     securityLevel: MLDSASecurityLevel,
     network: Network
 ): string {
@@ -216,11 +218,11 @@ export function exportWalletToString(
  * Import wallet from portable string format
  */
 export function importWalletFromString(serialized: string): {
-    keypair: ECPairInterface;
+    keypair: UniversalSigner;
     quantumKeypair: ReturnType<typeof QuantumBIP32Factory.fromPrivateKey>;
     network: Network;
     securityLevel: MLDSASecurityLevel;
-    chainCode: Buffer;
+    chainCode: Uint8Array;
 } {
     const exportData = deserializeExport(serialized);
     return importWallet(exportData);
@@ -258,8 +260,8 @@ export function validateExport(exportData: UnifiedWalletExport): boolean {
  * Convert legacy ExportedWallet format to unified format
  */
 export function fromLegacyExport(legacy: ExportedWallet, network: Network): UnifiedWalletExport {
-    const classicalPrivateKey = Buffer.from(legacy.classicalPrivateKey, 'hex');
-    const keypair = EcKeyPair.fromPrivateKey(classicalPrivateKey, network);
+    const classicalPrivateKey: Uint8Array = fromHexInternal(legacy.classicalPrivateKey);
+    const keypair: UniversalSigner = EcKeyPair.fromPrivateKey(classicalPrivateKey, network);
 
     const exportData: Omit<UnifiedWalletExport, 'checksum'> = {
         magic: MAGIC_HEADER,
@@ -267,7 +269,7 @@ export function fromLegacyExport(legacy: ExportedWallet, network: Network): Unif
         network: getNetworkName(network),
         classical: {
             privateKey: legacy.classicalPrivateKey,
-            publicKey: keypair.publicKey.toString('hex')
+            publicKey: toHex(keypair.publicKey)
         },
         quantum: {
             privateKey: legacy.quantumPrivateKey,

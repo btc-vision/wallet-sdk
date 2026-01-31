@@ -172,7 +172,7 @@ describe('Message Signing Module', () => {
     describe('MessageSigner.sha256', () => {
         it('should hash buffer message', () => {
             const hash = MessageSigner.sha256(testMessageBuffer);
-            expect(hash).toBeInstanceOf(Buffer);
+            expect(hash).toBeInstanceOf(Uint8Array);
             expect(hash.length).toBe(32); // SHA-256 is 32 bytes
         });
 

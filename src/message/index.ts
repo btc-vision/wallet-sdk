@@ -26,3 +26,5 @@ export {
     signBip322MessageWithNetworkType,
     verifyBip322MessageWithNetworkType
 } from './bip322.js';
+
+export { getNobleBackend } from './backend.js';

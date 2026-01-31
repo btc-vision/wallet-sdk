@@ -5,7 +5,7 @@
 
 import type { Network, Psbt } from '@btc-vision/bitcoin';
 import { AddressTypes, MLDSASecurityLevel, type QuantumBIP32Interface, WalletNetworks } from '@btc-vision/transaction';
-import type { ECPairInterface } from 'ecpair';
+import type { UniversalSigner } from '@btc-vision/ecpair';
 
 /**
  * Signature type for message signing operations
@@ -69,7 +69,7 @@ export interface ToSignInput {
 export interface DecodedAddress {
     readonly networkType: WalletNetworks;
     readonly addressType: AddressTypes;
-    readonly scriptPubKey: Buffer;
+    readonly scriptPubKey: Uint8Array;
 }
 
 /**
@@ -84,8 +84,8 @@ export interface QuantumKeyInfo {
  * Classical key pair information
  */
 export interface ClassicalKeyInfo {
-    readonly publicKey: Buffer;
-    readonly privateKey?: Buffer;
+    readonly publicKey: Uint8Array;
+    readonly privateKey?: Uint8Array;
 }
 
 /**
@@ -94,7 +94,7 @@ export interface ClassicalKeyInfo {
 export interface WalletKeyInfo {
     readonly classical: ClassicalKeyInfo;
     readonly quantum: QuantumKeyInfo;
-    readonly chainCode: Buffer;
+    readonly chainCode: Uint8Array;
 }
 
 /**
@@ -163,7 +163,7 @@ export interface SimpleKeyringOptions {
  * Message signature result
  */
 export interface SignedMessage {
-    readonly message: string | Buffer;
+    readonly message: string | Uint8Array;
     readonly signature: Uint8Array;
     readonly publicKey: Uint8Array;
     readonly signatureType: SignatureType;
@@ -175,7 +175,7 @@ export interface SignedMessage {
  */
 export interface Bip322Signature {
     readonly address: string;
-    readonly message: string | Buffer;
+    readonly message: string | Uint8Array;
     readonly signature: string;
     readonly networkType: WalletNetworks;
 }
@@ -205,7 +205,7 @@ export interface AccountAddresses {
  */
 export interface AbstractWallet {
     signPsbt(psbt: Psbt, opts?: SignPsbtOptions): Promise<Psbt> | Psbt;
-    signMessage(message: string | Buffer, method: MessageSigningMethod): Promise<string>;
+    signMessage(message: string | Uint8Array, method: MessageSigningMethod): Promise<string>;
 }
 
 /**
@@ -242,6 +242,6 @@ export function isPublicKeySignInput(input: SignInput): input is PublicKeySignIn
 }
 
 /**
- * Re-export ECPairInterface for convenience
+ * Re-export UniversalSigner for convenience
  */
-export type { ECPairInterface, QuantumBIP32Interface };
+export type { UniversalSigner, QuantumBIP32Interface };

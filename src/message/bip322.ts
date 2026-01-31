@@ -4,19 +4,50 @@
  * Reference: https://github.com/bitcoin/bips/blob/master/bip-0322.mediawiki
  */
 
-import * as ecc from '@bitcoinerlab/secp256k1';
-import * as bitcoin from '@btc-vision/bitcoin';
 import {
     address as bitcoinAddress,
+    alloc,
+    concat,
     crypto as bitcoinCrypto,
+    fromHex,
+    type Bytes32,
     type Network,
+    type PublicKey,
+    type Satoshi,
+    type Script,
     Psbt,
-    Transaction
+    PsbtTransaction,
+    script as bitcoinScript,
+    toSatoshi,
+    Transaction,
+    type ValidateSigFunction,
 } from '@btc-vision/bitcoin';
+import { type MessageHash, createMessageHash, createPublicKey, createSchnorrSignature, createSignature, createXOnlyPublicKey } from '@btc-vision/ecpair';
 import { AddressTypes, WalletNetworks } from '@btc-vision/transaction';
 import { detectAddressType } from '@/address';
 import { toNetwork } from '@/network';
 import type { Bip322Signature } from '@/types';
+import { getNobleBackend } from './backend.js';
+
+const textEncoder = new TextEncoder();
+const ZERO_SATOSHI: Satoshi = toSatoshi(0n);
+
+function toBase64(bytes: Uint8Array): string {
+    let binary = '';
+    for (const byte of bytes) {
+        binary += String.fromCharCode(byte);
+    }
+    return btoa(binary);
+}
+
+function fromBase64Bytes(base64: string): Uint8Array {
+    const binary: string = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
 
 /**
  * Supported address types for BIP322 signing
@@ -26,25 +57,25 @@ const SUPPORTED_ADDRESS_TYPES = [AddressTypes.P2WPKH, AddressTypes.P2TR];
 /**
  * Compute the BIP322 message hash
  */
-function computeBip322Hash(message: string | Buffer): Buffer {
+function computeBip322Hash(message: string | Uint8Array): Uint8Array {
     const tag = 'BIP0322-signed-message';
-    const tagHash = bitcoinCrypto.sha256(Buffer.from(tag, 'utf8'));
-    const messageBuffer = typeof message === 'string' ? Buffer.from(message, 'utf8') : message;
-    return bitcoinCrypto.sha256(Buffer.concat([tagHash, tagHash, messageBuffer]));
+    const tagHash = bitcoinCrypto.sha256(textEncoder.encode(tag));
+    const messageBytes: Uint8Array = typeof message === 'string' ? textEncoder.encode(message) : message;
+    return bitcoinCrypto.sha256(concat([tagHash, tagHash, messageBytes]));
 }
 
 /**
  * Encode a buffer as a variable-length string for witness serialization
  */
-function encodeVarString(buf: Buffer): Buffer {
-    const varint = bitcoin.script.number.encode(buf.length);
-    return Buffer.concat([varint, buf]);
+function encodeVarString(buf: Uint8Array): Uint8Array {
+    const varint = bitcoinScript.number.encode(buf.length);
+    return concat([varint, buf]);
 }
 
 /**
  * Generate a PSBT for BIP322 simple message signing
  */
-export function generateBip322Psbt(message: string | Buffer, address: string, network: Network): Psbt {
+export function generateBip322Psbt(message: string | Uint8Array, address: string, network: Network): Psbt {
     const outputScript = bitcoinAddress.toOutputScript(address, network);
     const addressType = detectAddressType(address, network);
 
@@ -53,16 +84,16 @@ export function generateBip322Psbt(message: string | Buffer, address: string, ne
     }
 
     const messageHash = computeBip322Hash(message);
-    const prevoutHash = Buffer.alloc(32, 0);
+    const prevoutHash = alloc(32) as Bytes32;
     const prevoutIndex = 0xffffffff;
     const sequence = 0;
-    const scriptSig = Buffer.concat([Buffer.from('0020', 'hex'), messageHash]);
+    const scriptSig = concat([fromHex('0020'), messageHash]) as Script;
 
     // Create "to spend" transaction
     const txToSpend = new Transaction();
     txToSpend.version = 0;
     txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
-    txToSpend.addOutput(outputScript, 0);
+    txToSpend.addOutput(outputScript as Script, ZERO_SATOSHI);
 
     // Create PSBT to sign
     const psbt = new Psbt({ network });
@@ -72,13 +103,13 @@ export function generateBip322Psbt(message: string | Buffer, address: string, ne
         index: 0,
         sequence: 0,
         witnessUtxo: {
-            script: outputScript,
-            value: 0
+            script: outputScript as Script,
+            value: ZERO_SATOSHI
         }
     });
     psbt.addOutput({
-        script: Buffer.from('6a', 'hex'), // OP_RETURN
-        value: 0
+        script: fromHex('6a') as Script, // OP_RETURN
+        value: ZERO_SATOSHI
     });
 
     return psbt;
@@ -96,17 +127,17 @@ export function extractBip322Signature(psbt: Psbt): string {
     }
 
     // Encode witness stack
-    const varintLength = bitcoin.script.number.encode(witness.length);
-    const encodedWitness = Buffer.concat([varintLength, ...witness.map((w) => encodeVarString(w))]);
+    const varintLength = bitcoinScript.number.encode(witness.length);
+    const encodedWitness = concat([varintLength, ...witness.map((w) => encodeVarString(w))]);
 
-    return encodedWitness.toString('base64');
+    return toBase64(encodedWitness);
 }
 
 /**
  * Sign a message using BIP322 simple format
  */
 export async function signBip322Message(
-    message: string | Buffer,
+    message: string | Uint8Array,
     address: string,
     network: Network,
     signPsbt: (psbt: Psbt) => Promise<Psbt>
@@ -120,24 +151,22 @@ export async function signBip322Message(
 /**
  * ECDSA signature validator
  */
-function ecdsaValidator(pubkey: Buffer, msghash: Buffer, signature: Buffer): boolean {
+const ecdsaValidator: ValidateSigFunction = (pubkey: PublicKey, msghash: MessageHash, signature: Uint8Array): boolean => {
     try {
-        // Decode DER signature if needed
-        const decoded = bitcoin.script.signature.decode(signature);
-        return ecc.verify(msghash, pubkey, decoded.signature);
+        const decoded = bitcoinScript.signature.decode(signature);
+        return getNobleBackend().verify(createMessageHash(msghash), createPublicKey(pubkey), createSignature(decoded.signature));
     } catch {
         return false;
     }
-}
+};
 
 /**
  * Schnorr signature validator
  */
-function schnorrValidator(pubkey: Buffer, msghash: Buffer, signature: Buffer): boolean {
+function schnorrValidator(pubkey: Uint8Array, msghash: Uint8Array, signature: Uint8Array): boolean {
     try {
-        // For Taproot, use x-only pubkey
         const xOnlyPubkey = pubkey.length === 33 ? pubkey.subarray(1, 33) : pubkey;
-        return ecc.verifySchnorr(msghash, xOnlyPubkey, signature);
+        return getNobleBackend().verifySchnorr(createMessageHash(msghash), createXOnlyPublicKey(xOnlyPubkey), createSchnorrSignature(signature));
     } catch {
         return false;
     }
@@ -146,37 +175,37 @@ function schnorrValidator(pubkey: Buffer, msghash: Buffer, signature: Buffer): b
 /**
  * Verify a BIP322 simple message signature for P2TR addresses
  */
-function verifyBip322P2TR(address: string, message: string | Buffer, signature: string, network: Network): boolean {
+function verifyBip322P2TR(address: string, message: string | Uint8Array, signature: string, network: Network): boolean {
     try {
         const outputScript = bitcoinAddress.toOutputScript(address, network);
         const messageHash = computeBip322Hash(message);
 
-        const prevoutHash = Buffer.alloc(32, 0);
+        const prevoutHash = alloc(32) as Bytes32;
         const prevoutIndex = 0xffffffff;
         const sequence = 0;
-        const scriptSig = Buffer.concat([Buffer.from('0020', 'hex'), messageHash]);
+        const scriptSig = concat([fromHex('0020'), messageHash]) as Script;
 
         // Reconstruct "to spend" transaction
         const txToSpend = new Transaction();
         txToSpend.version = 0;
         txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
-        txToSpend.addOutput(outputScript, 0);
+        txToSpend.addOutput(outputScript as Script, ZERO_SATOSHI);
 
         // Decode signature
-        const signatureData = Buffer.from(signature, 'base64');
-        const decompiled = bitcoin.script.decompile(signatureData.subarray(1));
+        const signatureData = fromBase64Bytes(signature);
+        const decompiled = bitcoinScript.decompile(signatureData.subarray(1));
 
         if (!Array.isArray(decompiled) || decompiled.length === 0) {
             return false;
         }
 
         const sig = decompiled[0];
-        if (!Buffer.isBuffer(sig)) {
+        if (!(sig instanceof Uint8Array)) {
             return false;
         }
 
         // Extract pubkey from output script (x-only format)
-        const pubkey = Buffer.concat([Buffer.from('02', 'hex'), outputScript.subarray(2)]);
+        const pubkey = concat([fromHex('02'), outputScript.subarray(2)]);
 
         // Create PSBT for verification
         const psbt = new Psbt({ network });
@@ -186,18 +215,19 @@ function verifyBip322P2TR(address: string, message: string | Buffer, signature: 
             index: 0,
             sequence: 0,
             witnessUtxo: {
-                script: outputScript,
-                value: 0
+                script: outputScript as Script,
+                value: ZERO_SATOSHI
             }
         });
         psbt.addOutput({
-            script: Buffer.from('6a', 'hex'),
-            value: 0
+            script: fromHex('6a') as Script,
+            value: ZERO_SATOSHI
         });
 
-        // Compute taproot sighash
-        const txForHash = (psbt as unknown as { __CACHE: { __TX: Transaction } }).__CACHE.__TX;
-        const tapKeyHash = txForHash.hashForWitnessV1(0, [outputScript], [0], bitcoin.Transaction.SIGHASH_DEFAULT);
+        // Compute taproot sighash using public API
+        const psbtTx = psbt.data.globalMap.unsignedTx as PsbtTransaction;
+        const txForHash: Transaction = psbtTx.tx;
+        const tapKeyHash = txForHash.hashForWitnessV1(0, [outputScript as Script], [ZERO_SATOSHI], Transaction.SIGHASH_DEFAULT);
 
         return schnorrValidator(pubkey, tapKeyHash, sig);
     } catch {
@@ -208,25 +238,25 @@ function verifyBip322P2TR(address: string, message: string | Buffer, signature: 
 /**
  * Verify a BIP322 simple message signature for P2WPKH addresses
  */
-function verifyBip322P2WPKH(address: string, message: string | Buffer, signature: string, network: Network): boolean {
+function verifyBip322P2WPKH(address: string, message: string | Uint8Array, signature: string, network: Network): boolean {
     try {
         const outputScript = bitcoinAddress.toOutputScript(address, network);
         const messageHash = computeBip322Hash(message);
 
-        const prevoutHash = Buffer.alloc(32, 0);
+        const prevoutHash = alloc(32) as Bytes32;
         const prevoutIndex = 0xffffffff;
         const sequence = 0;
-        const scriptSig = Buffer.concat([Buffer.from('0020', 'hex'), messageHash]);
+        const scriptSig = concat([fromHex('0020'), messageHash]) as Script;
 
         // Reconstruct "to spend" transaction
         const txToSpend = new Transaction();
         txToSpend.version = 0;
         txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
-        txToSpend.addOutput(outputScript, 0);
+        txToSpend.addOutput(outputScript as Script, ZERO_SATOSHI);
 
         // Decode signature
-        const signatureData = Buffer.from(signature, 'base64');
-        const decompiled = bitcoin.script.decompile(signatureData.subarray(1));
+        const signatureData = fromBase64Bytes(signature);
+        const decompiled = bitcoinScript.decompile(signatureData.subarray(1));
 
         if (!Array.isArray(decompiled) || decompiled.length < 2) {
             return false;
@@ -235,7 +265,7 @@ function verifyBip322P2WPKH(address: string, message: string | Buffer, signature
         const sig = decompiled[0];
         const pubkey = decompiled[1];
 
-        if (!Buffer.isBuffer(sig) || !Buffer.isBuffer(pubkey)) {
+        if (!(sig instanceof Uint8Array) || !(pubkey instanceof Uint8Array)) {
             return false;
         }
 
@@ -247,19 +277,19 @@ function verifyBip322P2WPKH(address: string, message: string | Buffer, signature
             index: 0,
             sequence: 0,
             witnessUtxo: {
-                script: outputScript,
-                value: 0
+                script: outputScript as Script,
+                value: ZERO_SATOSHI
             }
         });
         psbt.addOutput({
-            script: Buffer.from('6a', 'hex'),
-            value: 0
+            script: fromHex('6a') as Script,
+            value: ZERO_SATOSHI
         });
 
         psbt.updateInput(0, {
             partialSig: [
                 {
-                    pubkey,
+                    pubkey: pubkey as PublicKey,
                     signature: sig
                 }
             ]
@@ -276,7 +306,7 @@ function verifyBip322P2WPKH(address: string, message: string | Buffer, signature
  */
 export function verifyBip322Message(
     address: string,
-    message: string | Buffer,
+    message: string | Uint8Array,
     signature: string,
     network: Network
 ): boolean {
@@ -303,7 +333,7 @@ export function verifyBip322Message(
  * Sign a message using BIP322 with WalletNetworks parameter
  */
 export async function signBip322MessageWithNetworkType(
-    message: string | Buffer,
+    message: string | Uint8Array,
     address: string,
     networkType: WalletNetworks,
     signPsbt: (psbt: Psbt) => Promise<Psbt>
@@ -324,7 +354,7 @@ export async function signBip322MessageWithNetworkType(
  */
 export function verifyBip322MessageWithNetworkType(
     address: string,
-    message: string | Buffer,
+    message: string | Uint8Array,
     signature: string,
     networkType: WalletNetworks
 ): boolean {

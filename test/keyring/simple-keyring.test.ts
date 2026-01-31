@@ -218,7 +218,7 @@ describe('SimpleKeyring', () => {
         it('should return 32-byte chain code', () => {
             const keyring = SimpleKeyring.generate();
             const chainCode = keyring.getChainCode();
-            expect(chainCode).toBeInstanceOf(Buffer);
+            expect(chainCode).toBeInstanceOf(Uint8Array);
             expect(chainCode.length).toBe(32);
         });
     });

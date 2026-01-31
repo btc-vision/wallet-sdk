@@ -85,13 +85,13 @@ describe('Address Module', () => {
     describe('publicKeyToScriptPubKey', () => {
         it('should generate valid scriptPubKey for P2WPKH', () => {
             const scriptPk = publicKeyToScriptPubKey(testPublicKeyBuffer, AddressTypes.P2WPKH, networks.bitcoin);
-            expect(scriptPk).toBeInstanceOf(Buffer);
+            expect(scriptPk).toBeInstanceOf(Uint8Array);
             expect(scriptPk.length).toBe(22); // P2WPKH scriptPubKey is 22 bytes
         });
 
         it('should generate valid scriptPubKey for P2TR', () => {
             const scriptPk = publicKeyToScriptPubKey(testPublicKeyBuffer, AddressTypes.P2TR, networks.bitcoin);
-            expect(scriptPk).toBeInstanceOf(Buffer);
+            expect(scriptPk).toBeInstanceOf(Uint8Array);
             expect(scriptPk.length).toBe(34); // P2TR scriptPubKey is 34 bytes
         });
     });
@@ -100,13 +100,13 @@ describe('Address Module', () => {
         it('should convert P2WPKH address to scriptPubKey', () => {
             const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
             const scriptPk = addressToScriptPubKey(address, networks.bitcoin);
-            expect(scriptPk).toBeInstanceOf(Buffer);
+            expect(scriptPk).toBeInstanceOf(Uint8Array);
         });
 
         it('should convert P2TR address to scriptPubKey', () => {
             const address = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
             const scriptPk = addressToScriptPubKey(address, networks.bitcoin);
-            expect(scriptPk).toBeInstanceOf(Buffer);
+            expect(scriptPk).toBeInstanceOf(Uint8Array);
         });
     });
 

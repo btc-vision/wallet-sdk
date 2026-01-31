@@ -4,8 +4,8 @@
  * Uses @btc-vision/transaction AddressVerificator for all operations.
  */
 
-import * as bitcoin from '@btc-vision/bitcoin';
-import { address as bitcoinAddress, type Network, payments } from '@btc-vision/bitcoin';
+import { address as bitcoinAddress, fromHex, type Network, networks, type Payment, payments, toHex } from '@btc-vision/bitcoin';
+import { createPublicKey, createXOnlyPublicKey, fromHexInternal } from '@btc-vision/ecpair';
 import { AddressTypes, AddressVerificator, WalletNetworks } from '@btc-vision/transaction';
 import { toNetwork } from '@/network';
 import type { DecodedAddress } from '@/types';
@@ -13,34 +13,34 @@ import type { DecodedAddress } from '@/types';
 /**
  * Generate a Bitcoin address from a public key
  */
-export function publicKeyToAddress(publicKey: Buffer | string, addressType: AddressTypes, network: Network): string {
-    const pubkeyBuffer = typeof publicKey === 'string' ? Buffer.from(publicKey, 'hex') : publicKey;
+export function publicKeyToAddress(publicKey: Uint8Array | string, addressType: AddressTypes, network: Network): string {
+    const pubkeyBytes: Uint8Array = typeof publicKey === 'string' ? fromHexInternal(publicKey) : publicKey;
 
     switch (addressType) {
         case AddressTypes.P2PKH: {
-            const payment = payments.p2pkh({ pubkey: pubkeyBuffer, network });
+            const payment = payments.p2pkh({ pubkey: createPublicKey(pubkeyBytes), network });
             if (payment.address === undefined) {
                 throw new Error('Failed to generate P2PKH address');
             }
             return payment.address;
         }
         case AddressTypes.P2WPKH: {
-            const payment = payments.p2wpkh({ pubkey: pubkeyBuffer, network });
+            const payment = payments.p2wpkh({ pubkey: createPublicKey(pubkeyBytes), network });
             if (payment.address === undefined) {
                 throw new Error('Failed to generate P2WPKH address');
             }
             return payment.address;
         }
         case AddressTypes.P2TR: {
-            const internalPubkey = pubkeyBuffer.length === 33 ? pubkeyBuffer.subarray(1, 33) : pubkeyBuffer;
-            const payment = payments.p2tr({ internalPubkey, network });
+            const xOnly: Uint8Array = pubkeyBytes.length === 33 ? pubkeyBytes.subarray(1, 33) : pubkeyBytes;
+            const payment = payments.p2tr({ internalPubkey: createXOnlyPublicKey(xOnly), network });
             if (payment.address === undefined) {
                 throw new Error('Failed to generate P2TR address');
             }
             return payment.address;
         }
         case AddressTypes.P2SH_OR_P2SH_P2WPKH: {
-            const p2wpkh = payments.p2wpkh({ pubkey: pubkeyBuffer, network });
+            const p2wpkh = payments.p2wpkh({ pubkey: createPublicKey(pubkeyBytes), network });
             const payment = payments.p2sh({ redeem: p2wpkh, network });
             if (payment.address === undefined) {
                 throw new Error('Failed to generate P2SH-P2WPKH address');
@@ -57,25 +57,25 @@ export function publicKeyToAddress(publicKey: Buffer | string, addressType: Addr
  * Generate a payment object from a public key
  */
 export function publicKeyToPayment(
-    publicKey: Buffer | string,
+    publicKey: Uint8Array | string,
     addressType: AddressTypes,
     network: Network
-): bitcoin.Payment {
-    const pubkeyBuffer = typeof publicKey === 'string' ? Buffer.from(publicKey, 'hex') : publicKey;
+): Payment {
+    const pubkeyBytes: Uint8Array = typeof publicKey === 'string' ? fromHexInternal(publicKey) : publicKey;
 
     switch (addressType) {
         case AddressTypes.P2PKH: {
-            return payments.p2pkh({ pubkey: pubkeyBuffer, network });
+            return payments.p2pkh({ pubkey: createPublicKey(pubkeyBytes), network });
         }
         case AddressTypes.P2WPKH: {
-            return payments.p2wpkh({ pubkey: pubkeyBuffer, network });
+            return payments.p2wpkh({ pubkey: createPublicKey(pubkeyBytes), network });
         }
         case AddressTypes.P2TR: {
-            const internalPubkey = pubkeyBuffer.length === 33 ? pubkeyBuffer.subarray(1, 33) : pubkeyBuffer;
-            return payments.p2tr({ internalPubkey, network });
+            const xOnly: Uint8Array = pubkeyBytes.length === 33 ? pubkeyBytes.subarray(1, 33) : pubkeyBytes;
+            return payments.p2tr({ internalPubkey: createXOnlyPublicKey(xOnly), network });
         }
         case AddressTypes.P2SH_OR_P2SH_P2WPKH: {
-            const p2wpkh = payments.p2wpkh({ pubkey: pubkeyBuffer, network });
+            const p2wpkh = payments.p2wpkh({ pubkey: createPublicKey(pubkeyBytes), network });
             return payments.p2sh({ redeem: p2wpkh, network });
         }
         default: {
@@ -88,10 +88,10 @@ export function publicKeyToPayment(
  * Generate scriptPubKey from a public key
  */
 export function publicKeyToScriptPubKey(
-    publicKey: Buffer | string,
+    publicKey: Uint8Array | string,
     addressType: AddressTypes,
     network: Network
-): Buffer {
+): Uint8Array {
     const payment = publicKeyToPayment(publicKey, addressType, network);
     if (!payment.output) {
         throw new Error('Failed to generate script pubkey');
@@ -102,15 +102,15 @@ export function publicKeyToScriptPubKey(
 /**
  * Convert an address to its scriptPubKey
  */
-export function addressToScriptPubKey(address: string, network: Network): Buffer {
+export function addressToScriptPubKey(address: string, network: Network): Uint8Array {
     return bitcoinAddress.toOutputScript(address, network);
 }
 
 /**
  * Convert scriptPubKey to an address
  */
-export function scriptPubKeyToAddress(scriptPubKey: Buffer | string, network: Network): string {
-    const script = typeof scriptPubKey === 'string' ? Buffer.from(scriptPubKey, 'hex') : scriptPubKey;
+export function scriptPubKeyToAddress(scriptPubKey: Uint8Array | string, network: Network): string {
+    const script = typeof scriptPubKey === 'string' ? fromHex(scriptPubKey) : scriptPubKey;
     return bitcoinAddress.fromOutputScript(script, network);
 }
 
@@ -132,9 +132,9 @@ export function detectAddressType(address: string, network: Network): AddressTyp
  * Decode an address to get its network type, address type, and scriptPubKey
  */
 export function decodeAddress(address: string): DecodedAddress | null {
-    const mainnet = bitcoin.networks.bitcoin;
-    const testnet = bitcoin.networks.testnet;
-    const regtest = bitcoin.networks.regtest;
+    const mainnet = networks.bitcoin;
+    const testnet = networks.testnet;
+    const regtest = networks.regtest;
 
     // Try each network to decode the address
     const networksToTry: { network: Network; networkType: WalletNetworks }[] = [
@@ -166,8 +166,8 @@ export function decodeAddress(address: string): DecodedAddress | null {
 /**
  * Validate a public key using AddressVerificator
  */
-export function isValidPublicKey(publicKey: Buffer | string, network: Network): boolean {
-    const pubkeyHex = typeof publicKey === 'string' ? publicKey : publicKey.toString('hex');
+export function isValidPublicKey(publicKey: Uint8Array | string, network: Network): boolean {
+    const pubkeyHex = typeof publicKey === 'string' ? publicKey : toHex(publicKey);
     return AddressVerificator.isValidPublicKey(pubkeyHex, network);
 }
 
@@ -212,7 +212,7 @@ export function getAddressType(address: string, networkType: WalletNetworks): Ad
  * Convert WalletNetworks-based operations to Network-based
  */
 export function publicKeyToAddressWithNetworkType(
-    publicKey: Buffer | string,
+    publicKey: Uint8Array | string,
     addressType: AddressTypes,
     networkType: WalletNetworks
 ): string {

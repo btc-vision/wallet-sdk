@@ -4,7 +4,6 @@
  * Uses @btc-vision/transaction MessageSigner for all operations.
  */
 
-import * as ecc from '@bitcoinerlab/secp256k1';
 import { type Network, networks } from '@btc-vision/bitcoin';
 import {
     MessageSigner,
@@ -12,13 +11,14 @@ import {
     QuantumBIP32Factory,
     type QuantumBIP32Interface
 } from '@btc-vision/transaction';
-import type { ECPairInterface } from 'ecpair';
+import { type UniversalSigner, createMessageHash, createPublicKey, createSignature } from '@btc-vision/ecpair';
+import { getNobleBackend } from './backend.js';
 import type { SignatureType, SignedMessage } from '@/types';
 
 /**
- * Message input type - can be string, Buffer, or Uint8Array
+ * Message input type - can be string or Uint8Array
  */
-export type MessageInput = string | Buffer | Uint8Array;
+export type MessageInput = string | Uint8Array;
 
 /**
  * Result of ML-DSA signature operation
@@ -57,7 +57,7 @@ export function signMLDSA(keypair: QuantumBIP32Interface, message: MessageInput)
  */
 export function verifyMLDSA(
     publicKey: Uint8Array,
-    chainCode: Buffer,
+    chainCode: Uint8Array,
     network: Network,
     securityLevel: MLDSASecurityLevel,
     message: MessageInput,
@@ -81,7 +81,7 @@ export function verifyMLDSAWithKeypair(
 /**
  * Sign a message with Schnorr (classical)
  */
-export function signSchnorr(keypair: ECPairInterface, message: MessageInput): SchnorrSignatureResult {
+export function signSchnorr(keypair: UniversalSigner, message: MessageInput): SchnorrSignatureResult {
     const result = MessageSigner.signMessage(keypair, message);
     return {
         message: result.message,
@@ -93,7 +93,7 @@ export function signSchnorr(keypair: ECPairInterface, message: MessageInput): Sc
 /**
  * Verify a Schnorr signature
  */
-export function verifySchnorr(publicKey: Buffer | Uint8Array, message: MessageInput, signature: Uint8Array): boolean {
+export function verifySchnorr(publicKey: Uint8Array, message: MessageInput, signature: Uint8Array): boolean {
     return MessageSigner.verifySignature(publicKey, message, signature);
 }
 
@@ -101,7 +101,7 @@ export function verifySchnorr(publicKey: Buffer | Uint8Array, message: MessageIn
  * Sign a message with tweaked key for Taproot
  */
 export function signTweakedSchnorr(
-    keypair: ECPairInterface,
+    keypair: UniversalSigner,
     message: MessageInput,
     network: Network = networks.bitcoin
 ): SchnorrSignatureResult {
@@ -117,7 +117,7 @@ export function signTweakedSchnorr(
  * Verify a tweaked Schnorr signature
  */
 export function verifyTweakedSchnorr(
-    publicKey: Buffer | Uint8Array,
+    publicKey: Uint8Array,
     message: MessageInput,
     signature: Uint8Array
 ): boolean {
@@ -128,11 +128,11 @@ export function verifyTweakedSchnorr(
  * Sign message with automatic type selection
  */
 export function signMessage(
-    keypair: ECPairInterface | QuantumBIP32Interface,
+    keypair: UniversalSigner | QuantumBIP32Interface,
     message: MessageInput,
     signatureType: SignatureType
 ): SignedMessage {
-    const messageBuffer = toBuffer(message);
+    const messageBytes: Uint8Array = toUint8Array(message);
     switch (signatureType) {
         case 'mldsa': {
             if (!isQuantumKeypair(keypair)) {
@@ -140,7 +140,7 @@ export function signMessage(
             }
             const result = signMLDSA(keypair, message);
             return {
-                message: messageBuffer,
+                message: messageBytes,
                 signature: result.signature,
                 publicKey: result.publicKey,
                 signatureType: 'mldsa',
@@ -153,7 +153,7 @@ export function signMessage(
             }
             const result = signSchnorr(keypair, message);
             return {
-                message: messageBuffer,
+                message: messageBytes,
                 signature: result.signature,
                 publicKey: result.publicKey,
                 signatureType: 'schnorr'
@@ -163,10 +163,10 @@ export function signMessage(
             if (isQuantumKeypair(keypair)) {
                 throw new Error('ECDSA signing requires a classical keypair');
             }
-            const hash = MessageSigner.sha256(messageBuffer);
-            const signature = keypair.sign(Buffer.from(hash));
+            const hash = MessageSigner.sha256(messageBytes);
+            const signature = keypair.sign(createMessageHash(hash));
             return {
-                message: messageBuffer,
+                message: messageBytes,
                 signature,
                 publicKey: keypair.publicKey,
                 signatureType: 'ecdsa'
@@ -179,11 +179,11 @@ export function signMessage(
  * Verify message with automatic type detection
  */
 export function verifyMessage(
-    publicKey: Buffer | Uint8Array,
+    publicKey: Uint8Array,
     message: MessageInput,
     signature: Uint8Array,
     signatureType: SignatureType,
-    chainCode?: Buffer,
+    chainCode?: Uint8Array,
     network?: Network,
     securityLevel?: MLDSASecurityLevel
 ): boolean {
@@ -198,10 +198,9 @@ export function verifyMessage(
             return verifySchnorr(publicKey, message, signature);
         }
         case 'ecdsa': {
-            // For ECDSA verification, use secp256k1 directly
-            const messageBuffer = toBuffer(message);
-            const hash = MessageSigner.sha256(messageBuffer);
-            return ecc.verify(hash, Buffer.from(publicKey), Buffer.from(signature));
+            const ecdsaBytes: Uint8Array = toUint8Array(message);
+            const hash: Uint8Array = MessageSigner.sha256(ecdsaBytes);
+            return getNobleBackend().verify(createMessageHash(hash), createPublicKey(publicKey), createSignature(signature));
         }
     }
 }
@@ -209,19 +208,15 @@ export function verifyMessage(
 /**
  * Type guard to check if keypair is quantum
  */
-function isQuantumKeypair(keypair: ECPairInterface | QuantumBIP32Interface): keypair is QuantumBIP32Interface {
+function isQuantumKeypair(keypair: UniversalSigner | QuantumBIP32Interface): keypair is QuantumBIP32Interface {
     return 'securityLevel' in keypair && 'chainCode' in keypair;
 }
 
-/**
- * Convert message input to Buffer
- */
-function toBuffer(message: MessageInput): Buffer {
+const textEncoder = new TextEncoder();
+
+function toUint8Array(message: MessageInput): Uint8Array {
     if (typeof message === 'string') {
-        return Buffer.from(message, 'utf8');
-    }
-    if (message instanceof Uint8Array) {
-        return Buffer.from(message);
+        return textEncoder.encode(message);
     }
     return message;
 }
