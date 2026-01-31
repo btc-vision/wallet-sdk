@@ -10,11 +10,9 @@
  * - PSBT transaction signing
  */
 
-import * as ecc from '@bitcoinerlab/secp256k1';
-import { initEccLib } from '@btc-vision/bitcoin';
-
-// Initialize secp256k1 library
-initEccLib(ecc);
+// Ensure @btc-vision/transaction is imported first so its internal
+// ecc backend (NobleBackend) is initialised before any bitcoinjs-lib usage.
+import '@btc-vision/transaction';
 
 // Network module
 export {
@@ -78,7 +76,8 @@ export {
     verifyBip322MessageWithNetworkType,
     type MessageInput,
     type MLDSASignatureResult,
-    type SchnorrSignatureResult
+    type SchnorrSignatureResult,
+    getNobleBackend
 } from './message/index.js';
 
 // Wallet module

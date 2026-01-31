@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import dts from 'vite-plugin-dts';
@@ -7,11 +6,10 @@ import dts from 'vite-plugin-dts';
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
-        react(),
         // Generate TypeScript declaration files
         dts({
             insertTypesEntry: true,
-            include: ['src/**/*.ts', 'src/**/*.tsx'],
+            include: ['src/**/*.ts'],
             outDir: 'dist',
             rollupTypes: true
         }),
@@ -35,7 +33,7 @@ export default defineConfig({
         lib: {
             // Entry point for library mode
             entry: resolve(__dirname, 'src/index.ts'),
-            name: 'YourLibraryName', // Replace with your library name
+            name: 'WalletSDK',
             formats: ['es', 'cjs'],
             fileName: (format) => {
                 if (format === 'es') return 'index.esm.js';
@@ -45,13 +43,8 @@ export default defineConfig({
         },
         rollupOptions: {
             // Externalize dependencies that shouldn't be bundled
-            external: ['react', 'react-dom'],
+            external: ['@btc-vision/bitcoin', '@btc-vision/ecpair', '@btc-vision/bip32', '@btc-vision/transaction', 'opnet'],
             output: {
-                // Global variables for UMD build
-                globals: {
-                    react: 'React',
-                    'react-dom': 'ReactDOM'
-                },
                 // Preserve the directory structure for ESM build
                 preserveModules: false,
                 exports: 'named'

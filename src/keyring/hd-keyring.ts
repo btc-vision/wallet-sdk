@@ -5,6 +5,7 @@
  */
 
 import { isTaprootInput, type Network, networks, Psbt } from '@btc-vision/bitcoin';
+import { createBytes32, createMessageHash, fromHexInternal, toHex, type UniversalSigner } from '@btc-vision/ecpair';
 import {
     AddressTypes,
     MLDSASecurityLevel,
@@ -275,8 +276,8 @@ export class HdKeyring {
      * Get an address for a public key and address type
      */
     public getAddress(publicKey: string, addressType: AddressTypes): string {
-        const pubkeyBuffer = Buffer.from(publicKey, 'hex');
-        return publicKeyToAddress(pubkeyBuffer, addressType, this.network);
+        const pubkeyBytes: Uint8Array = fromHexInternal(publicKey);
+        return publicKeyToAddress(pubkeyBytes, addressType, this.network);
     }
 
     /**
@@ -320,8 +321,8 @@ export class HdKeyring {
 
             if (isTaprootInput(psbtInput) && input.disableTweakSigner !== true) {
                 // For taproot, use tweaked signer
-                const internalPubkey = wallet.publicKey.subarray(1, 33);
-                const tweakedKeypair = keypair.tweak(Buffer.from(internalPubkey));
+                const internalPubkey: Uint8Array = wallet.publicKey.subarray(1, 33);
+                const tweakedKeypair: UniversalSigner = keypair.tweak(createBytes32(internalPubkey));
                 psbt.signInput(input.index, tweakedKeypair, sighashTypes);
             } else {
                 psbt.signInput(input.index, keypair, sighashTypes);
@@ -336,13 +337,17 @@ export class HdKeyring {
      */
     public signData(publicKey: string, data: string, type: 'ecdsa' | 'schnorr' = 'ecdsa'): string {
         const wallet = this.findWalletByPublicKey(publicKey);
-        const dataBuffer = Buffer.from(data, 'hex');
+        const dataHash = createMessageHash(fromHexInternal(data));
 
         if (type === 'ecdsa') {
-            return Buffer.from(wallet.keypair.sign(dataBuffer)).toString('hex');
-        } else {
-            return Buffer.from(wallet.keypair.signSchnorr(dataBuffer)).toString('hex');
+            return toHex(wallet.keypair.sign(dataHash));
         }
+
+        if (wallet.keypair.signSchnorr === undefined) {
+            throw new Error('HdKeyring: Schnorr signing not supported by this keypair');
+        }
+
+        return toHex(wallet.keypair.signSchnorr(dataHash));
     }
 
     /**
@@ -436,9 +441,9 @@ export class HdKeyring {
     /**
      * Get the chain code for a wallet
      */
-    public getChainCode(publicKey: string): Buffer {
+    public getChainCode(publicKey: string): Uint8Array {
         const wallet = this.findWalletByPublicKey(publicKey);
-        return Buffer.from(wallet.chainCode);
+        return Uint8Array.from(wallet.chainCode);
     }
 
     /**
