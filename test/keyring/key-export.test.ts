@@ -245,6 +245,28 @@ describe('Key Export Module', () => {
             const imported = importWalletFromString(exportedString);
             expect(imported.network).toBe(networks.regtest);
         });
+
+        it('should export and import opnetTestnet wallet', () => {
+            const keyring = SimpleKeyring.generate(networks.opnetTestnet);
+            const keypair = keyring.getKeypair();
+            const quantumKeypair = keyring.getQuantumKeypair();
+
+            const exported = exportWallet(
+                keypair.privateKey!,
+                keypair.publicKey,
+                quantumKeypair.privateKey!,
+                quantumKeypair.publicKey,
+                keyring.getChainCode(),
+                keyring.getSecurityLevel(),
+                keyring.getNetwork()
+            );
+
+            expect(exported.network).toBe('opnetTestnet');
+
+            const imported = importWallet(exported);
+            expect(imported.network).toBe(networks.opnetTestnet);
+            expect(imported.network.bech32).toBe('opt');
+        });
     });
 
     describe('security level support', () => {

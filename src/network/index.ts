@@ -61,23 +61,44 @@ export function getBech32Prefix(networkType: WalletNetworks): string {
 }
 
 /**
- * Detect network type from an address
+ * Detect network type from an address.
+ *
+ * Handles bech32/bech32m (segwit), base58 P2PKH and P2SH formats.
+ * Order matters: more specific prefixes (bcrt1, opt1) are checked before
+ * shorter ones (bc1, tb1) to avoid false matches.
  */
 export function detectNetworkFromAddress(address: string): WalletNetworks | null {
-    if (address.startsWith('bc1') || address.startsWith('1') || address.startsWith('3')) {
+    // Bech32/bech32m — check longest prefixes first to avoid false matches
+    // Regtest: bcrt1...
+    if (address.startsWith(`${networks.regtest.bech32}1`)) {
+        return WalletNetworks.Regtest;
+    }
+
+    // OPNet Testnet: opt1...
+    if (address.startsWith(`${networks.opnetTestnet.bech32}1`)) {
+        return WalletNetworks.OpnetTestnet;
+    }
+
+    // Mainnet: bc1...  (also covers legacy 1... and 3...)
+    if (address.startsWith(`${networks.bitcoin.bech32}1`)) {
         return WalletNetworks.Mainnet;
     }
 
-    if (address.startsWith('tb1') || address.startsWith('m') || address.startsWith('n') || address.startsWith('2')) {
+    // Testnet: tb1...
+    if (address.startsWith(`${networks.testnet.bech32}1`)) {
         return WalletNetworks.Testnet;
     }
 
-    if (address.startsWith('opt1') || address.startsWith('m') || address.startsWith('n') || address.startsWith('2')) {
-        return WalletNetworks.Testnet;
+    // Base58 legacy addresses (P2PKH / P2SH)
+    // Mainnet P2PKH starts with 1, P2SH starts with 3
+    if (address.startsWith('1') || address.startsWith('3')) {
+        return WalletNetworks.Mainnet;
     }
 
-    if (address.startsWith('bcrt1')) {
-        return WalletNetworks.Regtest;
+    // Testnet/Regtest P2PKH starts with m or n, P2SH starts with 2
+    // (Regtest and testnet share the same base58 prefixes)
+    if (address.startsWith('m') || address.startsWith('n') || address.startsWith('2')) {
+        return WalletNetworks.Testnet;
     }
 
     return null;
