@@ -5,9 +5,10 @@
  */
 
 import { crypto as bitcoinCrypto, type Network, networks } from '@btc-vision/bitcoin';
-import { EcKeyPair, MLDSASecurityLevel, QuantumBIP32Factory } from '@btc-vision/transaction';
+import { EcKeyPair, MLDSASecurityLevel, QuantumBIP32Factory, WalletNetworks } from '@btc-vision/transaction';
 import { fromHexInternal, toHex, type UniversalSigner } from '@btc-vision/ecpair';
 import type { ExportedWallet } from '@/types';
+import { toNetwork, toNetworkType } from '@/network';
 
 const EXPORT_VERSION = 1;
 const MAGIC_HEADER = 'OPNET_WALLET_V1';
@@ -43,38 +44,24 @@ function calculateChecksum(data: string): string {
 }
 
 /**
- * Get network name from Network object
+ * Get network name from Network object (serialized as WalletNetworks enum value)
  */
 function getNetworkName(network: Network): string {
-    if (network.bech32 === networks.bitcoin.bech32) {
-        return 'mainnet';
-    }
-
-    if (network.bech32 === networks.testnet.bech32) {
-        return 'testnet';
-    }
-
-    return 'regtest';
+    return toNetworkType(network);
 }
 
 /**
- * Get Network object from network name
+ * Get Network object from network name (WalletNetworks enum value)
  */
 function getNetworkFromName(name: string): Network {
-    switch (name) {
-        case 'mainnet': {
-            return networks.bitcoin;
-        }
-        case 'testnet': {
-            return networks.testnet;
-        }
-        case 'regtest': {
-            return networks.regtest;
-        }
-        default: {
-            return networks.bitcoin;
-        }
+    const walletNetwork = name as WalletNetworks;
+
+    // Validate it's a known enum value, fall back to mainnet for unknown
+    if (Object.values(WalletNetworks).includes(walletNetwork)) {
+        return toNetwork(walletNetwork);
     }
+
+    return networks.bitcoin;
 }
 
 /**

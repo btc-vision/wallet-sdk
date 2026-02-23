@@ -132,15 +132,12 @@ export function detectAddressType(address: string, network: Network): AddressTyp
  * Decode an address to get its network type, address type, and scriptPubKey
  */
 export function decodeAddress(address: string): DecodedAddress | null {
-    const mainnet = networks.bitcoin;
-    const testnet = networks.testnet;
-    const regtest = networks.regtest;
-
     // Try each network to decode the address
     const networksToTry: { network: Network; networkType: WalletNetworks }[] = [
-        { network: mainnet, networkType: WalletNetworks.Mainnet },
-        { network: testnet, networkType: WalletNetworks.Testnet },
-        { network: regtest, networkType: WalletNetworks.Regtest }
+        { network: networks.bitcoin, networkType: WalletNetworks.Mainnet },
+        { network: networks.opnetTestnet, networkType: WalletNetworks.OpnetTestnet },
+        { network: networks.testnet, networkType: WalletNetworks.Testnet },
+        { network: networks.regtest, networkType: WalletNetworks.Regtest }
     ];
 
     for (const { network, networkType } of networksToTry) {
