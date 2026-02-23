@@ -50,6 +50,14 @@ describe('Address Module', () => {
             expect(p2tr).toMatch(/^tb1p/);
         });
 
+        it('should generate opnetTestnet addresses with opt prefix', () => {
+            const p2wpkh = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2WPKH, networks.opnetTestnet);
+            expect(p2wpkh).toMatch(/^opt1q/);
+
+            const p2tr = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2TR, networks.opnetTestnet);
+            expect(p2tr).toMatch(/^opt1p/);
+        });
+
         it('should accept hex string public key', () => {
             const address = publicKeyToAddress(testPublicKey, AddressTypes.P2WPKH, networks.bitcoin);
             expect(address).toMatch(/^bc1q/);
@@ -180,6 +188,14 @@ describe('Address Module', () => {
             const decoded = decodeAddress(address);
             expect(decoded).not.toBeNull();
             expect(decoded?.networkType).toBe(WalletNetworks.Testnet);
+        });
+
+        it('should decode opnetTestnet address', () => {
+            const opnetAddress = publicKeyToAddress(testPublicKeyBuffer, AddressTypes.P2WPKH, networks.opnetTestnet);
+            const decoded = decodeAddress(opnetAddress);
+            expect(decoded).not.toBeNull();
+            expect(decoded?.networkType).toBe(WalletNetworks.OpnetTestnet);
+            expect(decoded?.addressType).toBe(AddressTypes.P2WPKH);
         });
 
         it('should return null for invalid address', () => {
