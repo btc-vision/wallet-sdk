@@ -6,7 +6,7 @@
 
 import { crypto as bitcoinCrypto, type Network, networks } from '@btc-vision/bitcoin';
 import { EcKeyPair, MLDSASecurityLevel, QuantumBIP32Factory } from '@btc-vision/transaction';
-import { type UniversalSigner, fromHexInternal, toHex } from '@btc-vision/ecpair';
+import { fromHexInternal, toHex, type UniversalSigner } from '@btc-vision/ecpair';
 import type { ExportedWallet } from '@/types';
 
 const EXPORT_VERSION = 1;
@@ -49,9 +49,11 @@ function getNetworkName(network: Network): string {
     if (network.bech32 === networks.bitcoin.bech32) {
         return 'mainnet';
     }
+
     if (network.bech32 === networks.testnet.bech32) {
         return 'testnet';
     }
+
     return 'regtest';
 }
 

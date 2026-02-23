@@ -14,11 +14,21 @@ export function toNetwork(networkType: WalletNetworks): Network {
         case WalletNetworks.Mainnet: {
             return networks.bitcoin;
         }
+
         case WalletNetworks.Testnet: {
             return networks.testnet;
         }
+
         case WalletNetworks.Regtest: {
             return networks.regtest;
+        }
+
+        case WalletNetworks.OpnetTestnet: {
+            return networks.opnetTestnet;
+        }
+
+        default: {
+            throw new Error(`Unsupported network type: ${networkType}`);
         }
     }
 }
@@ -30,9 +40,15 @@ export function toNetworkType(network: Network): WalletNetworks {
     if (network.bech32 === networks.bitcoin.bech32) {
         return WalletNetworks.Mainnet;
     }
+
     if (network.bech32 === networks.testnet.bech32) {
         return WalletNetworks.Testnet;
     }
+
+    if (network.bech32 === networks.opnetTestnet.bech32) {
+        return WalletNetworks.OpnetTestnet;
+    }
+
     return WalletNetworks.Regtest;
 }
 
@@ -51,12 +67,19 @@ export function detectNetworkFromAddress(address: string): WalletNetworks | null
     if (address.startsWith('bc1') || address.startsWith('1') || address.startsWith('3')) {
         return WalletNetworks.Mainnet;
     }
+
     if (address.startsWith('tb1') || address.startsWith('m') || address.startsWith('n') || address.startsWith('2')) {
         return WalletNetworks.Testnet;
     }
+
+    if (address.startsWith('opt1') || address.startsWith('m') || address.startsWith('n') || address.startsWith('2')) {
+        return WalletNetworks.Testnet;
+    }
+
     if (address.startsWith('bcrt1')) {
         return WalletNetworks.Regtest;
     }
+
     return null;
 }
 
