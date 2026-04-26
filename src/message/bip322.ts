@@ -93,7 +93,7 @@ export function generateBip322Psbt(message: string | Uint8Array, address: string
     const txToSpend = new Transaction();
     txToSpend.version = 0;
     txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
-    txToSpend.addOutput(outputScript as Script, ZERO_SATOSHI);
+    txToSpend.addOutput(outputScript, ZERO_SATOSHI);
 
     // Create PSBT to sign
     const psbt = new Psbt({ network });
@@ -103,7 +103,7 @@ export function generateBip322Psbt(message: string | Uint8Array, address: string
         index: 0,
         sequence: 0,
         witnessUtxo: {
-            script: outputScript as Script,
+            script: outputScript,
             value: ZERO_SATOSHI
         }
     });
@@ -189,7 +189,7 @@ function verifyBip322P2TR(address: string, message: string | Uint8Array, signatu
         const txToSpend = new Transaction();
         txToSpend.version = 0;
         txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
-        txToSpend.addOutput(outputScript as Script, ZERO_SATOSHI);
+        txToSpend.addOutput(outputScript, ZERO_SATOSHI);
 
         // Decode signature
         const signatureData = fromBase64Bytes(signature);
@@ -215,7 +215,7 @@ function verifyBip322P2TR(address: string, message: string | Uint8Array, signatu
             index: 0,
             sequence: 0,
             witnessUtxo: {
-                script: outputScript as Script,
+                script: outputScript,
                 value: ZERO_SATOSHI
             }
         });
@@ -227,7 +227,7 @@ function verifyBip322P2TR(address: string, message: string | Uint8Array, signatu
         // Compute taproot sighash using public API
         const psbtTx = psbt.data.globalMap.unsignedTx as PsbtTransaction;
         const txForHash: Transaction = psbtTx.tx;
-        const tapKeyHash = txForHash.hashForWitnessV1(0, [outputScript as Script], [ZERO_SATOSHI], Transaction.SIGHASH_DEFAULT);
+        const tapKeyHash = txForHash.hashForWitnessV1(0, [outputScript], [ZERO_SATOSHI], Transaction.SIGHASH_DEFAULT);
 
         return schnorrValidator(pubkey, tapKeyHash, sig);
     } catch {
@@ -252,7 +252,7 @@ function verifyBip322P2WPKH(address: string, message: string | Uint8Array, signa
         const txToSpend = new Transaction();
         txToSpend.version = 0;
         txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
-        txToSpend.addOutput(outputScript as Script, ZERO_SATOSHI);
+        txToSpend.addOutput(outputScript, ZERO_SATOSHI);
 
         // Decode signature
         const signatureData = fromBase64Bytes(signature);
@@ -277,7 +277,7 @@ function verifyBip322P2WPKH(address: string, message: string | Uint8Array, signa
             index: 0,
             sequence: 0,
             witnessUtxo: {
-                script: outputScript as Script,
+                script: outputScript,
                 value: ZERO_SATOSHI
             }
         });
@@ -289,7 +289,7 @@ function verifyBip322P2WPKH(address: string, message: string | Uint8Array, signa
         psbt.updateInput(0, {
             partialSig: [
                 {
-                    pubkey: pubkey as PublicKey,
+                    pubkey: pubkey,
                     signature: sig
                 }
             ]
